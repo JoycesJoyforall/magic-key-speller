@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Magic Key">
+<meta name="theme-color" content="#0f0f1a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f0f1a'/><text y='.9em' x='50' text-anchor='middle' font-size='65'>🗝️</text></svg>">
+<title>Magic Key Speller</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body,#root{height:100%;width:100%;overflow-x:hidden}
+body{background:#0f0f1a;font-family:-apple-system,'SF Pro Rounded','Helvetica Neue','Segoe UI',sans-serif;
+  overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+button{-webkit-appearance:none;font-family:inherit}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(72,202,228,0.3)}50%{box-shadow:0 0 20px rgba(72,202,228,0.6)}}
+@keyframes bounceIn{0%{transform:scale(0)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+</style>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback,useRef} = React;
+
+// ═══════════════════════════════════════════════════════════════
+// 🗝️ MAGIC KEY SPELLER — Offline PWA Edition
+// ═══════════════════════════════════════════════════════════════
+
+// ── STORAGE HELPER (localStorage wrapper) ─────────────────────
+const Storage = {
+  get(key) { try { const v=localStorage.getItem(key); return v?JSON.parse(v):null; } catch{ return null; } },
+  set(key,val) { try { localStorage.setItem(key,JSON.stringify(val)); return true; } catch{ return false; } },
+  remove(key) { try { localStorage.removeItem(key); } catch{} },
+};
+
+const FRY_LIST_1 = [
+["the","The magic key started to glow."],["of","A cup of warm cocoa."],["and","Biff and Chip ran outside."],["a","She found a golden key."],["to","Time to go on an adventure!"],["in","The cat hid in the box."],["is","This is a wonderful day."],["you","You can do it!"],["that","Look at that rainbow!"],["it","It was snowing outside."],
+["he","He opened the treasure chest."],["was","It was a magical morning."],["for","This gift is for you."],["on","The bird sat on the branch."],["are","We are best friends."],["as","As tall as a tree!"],["with","Come with me to the forest."],["his","He packed his backpack."],["they","They found a secret path."],["I","I love reading stories."],
+["at","Meet me at the garden."],["be","I want to be brave."],["this","This is my favourite book."],["have","I have a new kitten."],["from","A letter from a friend."],["or","Do you want tea or juice?"],["one","One star shone brightly."],["had","She had a great idea."],["by","Sit by the campfire."],["words","She wrote magic words."],
+["but","Small but very brave."],["not","It is not too far away."],["what","What a surprise!"],["all","All the flowers bloomed."],["were","They were so excited."],["we","We made a sandcastle."],["when","When the bell rings, run!"],["your","Bring your favourite toy."],["can","You can climb this hill."],["said","Come here, said Mum."],
+["there","Over there by the pond."],["use","Use your magic wand."],["an","She ate an apple."],["each","Each child got a star."],["which","Which colour do you like?"],["she","She painted a butterfly."],["do","What do you see?"],["how","How did you make that?"],["their","Their garden is beautiful."],["if","If it rains, we play inside."],
+["will","I will help you."],["up","Climb up the beanstalk!"],["other","The other side of the hill."],["about","Tell me about your day."],["out","Let's go out and play."],["many","So many pretty shells!"],["then","Then the door opened."],["them","Give them a wave."],["these","I made these cookies."],["so","She was so happy."],
+["some","Have some strawberries."],["her","Her dress was sky blue."],["would","Would you like to come?"],["make","Let's make a crown."],["like","I like sunny days."],["him","Tell him the good news."],["into","Jump into the leaves!"],["time","It is time for a story."],["has","She has a pet rabbit."],["look","Look at the stars!"],
+["two","Two little ducks swam by."],["more","Tell me more, please!"],["write","Write your name here."],["go","Ready, set, go!"],["see","Can you see the bird?"],["number","Pick a lucky number."],["no","No, thank you."],["way","Which way do we go?"],["could","She could hear music."],["people","Kind people help others."],
+["my","My dog loves the park."],["than","Taller than a sunflower!"],["first","I finished first!"],["water","The water sparkled."],["been","I have been here before."],["called","Mum called my name."],["who","Who is at the door?"],["oil","Stir the oil gently."],["sit","Sit down and listen."],["now","Let's start now!"],
+["find","Can you find the key?"],["long","A long winding path."],["down","Slide down the hill!"],["day","What a lovely day!"],["did","She did a cartwheel."],["get","Let's get started!"],["come","Come and see this!"],["made","She made a necklace."],["may","May I have a turn?"],["part","This is the best part."],
+];
+
+const FRY_LIST_2 = [
+["new","A new adventure begins!"],["sound","What sound does it make?"],["take","Take my hand."],["only","The only key that fits."],["little","A little bird sang sweetly."],["work","Great work today!"],["know","I know the answer!"],["place","A magical place to visit."],["years","She is seven years old."],["live","We live near a forest."],
+["me","Read to me, please."],["back","Come back before dark."],["give","Give it a try!"],["most","The most beautiful flower."],["very","She was very kind."],["after","After school we play."],["things","Pack your things."],["our","This is our treehouse."],["just","I just finished it!"],["name","Write your name."],
+["good","What a good idea!"],["sentence","Read the sentence aloud."],["man","The man waved hello."],["think","I think we can do it."],["say","What did you say?"],["great","You did a great job!"],["where","Where is the treasure?"],["help","Can you help me?"],["through","Walk through the garden."],["much","Thank you so much!"],
+["before","Wash hands before eating."],["line","Draw a straight line."],["right","That is the right answer."],["too","Me too!"],["means","This word means happy."],["old","An old oak tree."],["any","Do you have any crayons?"],["same","We wore the same hat!"],["tell","Tell me a story."],["boy","The boy climbed the tree."],
+["follow","Follow the trail."],["came","A butterfly came by."],["want","I want to explore."],["show","Show me your drawing."],["also","I also like painting."],["around","Look around the room."],["farm","Visit the farm today."],["three","Three little kittens."],["small","A small acorn grew big."],["set","Set the table, please."],
+["put","Put on your coat."],["end","The end of the story."],["does","How does this work?"],["another","Read another chapter."],["well","You did very well!"],["large","A large friendly bear."],["must","We must be brave."],["big","A big red balloon."],["even","She can even do magic!"],["such","Such a pretty drawing."],
+["because","I smiled because I was happy."],["turn","It is your turn now."],["here","Come over here."],["why","Why is the sky blue?"],["ask","Ask a question."],["went","We went to the park."],["men","The men built a raft."],["read","I love to read books."],["need","You need a warm scarf."],["land","They reached a new land."],
+["different","Every snowflake is different."],["home","Welcome home!"],["us","Come with us!"],["move","Move to the music."],["try","Try your best!"],["kind","Be kind to everyone."],["hand","Hold my hand."],["picture","Draw a picture."],["again","Let's do it again!"],["change","Change into your boots."],
+["off","Take off your hat."],["play","Let's play together."],["spell","Can you spell this word?"],["air","Fresh morning air."],["away","Far, far away."],["animal","My favourite animal is a fox."],["house","A cosy little house."],["point","Point to the star."],["page","Turn the page."],["letter","Write a letter to Granny."],
+["mother","My mother reads to me."],["answer","She knew the answer."],["found","They found a hidden door."],["study","Study the map carefully."],["still","Sit very still."],["learn","I love to learn."],["should","You should try this."],["America","America is far away."],["world","Travel around the world."],["high","High up in the clouds."],
+];
+
+const FRY_LIST_3 = [
+["every","Every day is special."],["near","Come near the fire."],["add","Add some glitter."],["food","The food smells yummy."],["between","A path between the trees."],["own","I made my own bracelet."],["below","Look below the bridge."],["country","A beautiful green country."],["plant","Plant a tiny seed."],["last","The last piece of cake."],
+["school","I love going to school."],["father","My father tells stories."],["keep","Keep the secret safe."],["tree","A big apple tree."],["never","Never give up!"],["start","Ready to start?"],["city","The city lights sparkled."],["earth","Take care of the earth."],["eyes","Close your eyes and wish."],["light","The light shone brightly."],
+["thought","She thought for a moment."],["head","She shook her head."],["under","Hide under the blanket."],["story","Tell me a bedtime story."],["saw","I saw a deer today."],["left","Turn left at the tree."],["don't","Don't worry, be happy!"],["few","Just a few more steps."],["while","Rest for a little while."],["along","Walk along the river."],
+["might","You might find treasure!"],["close","Close the gate gently."],["something","I found something shiny!"],["seem","Things seem magical here."],["next","What happens next?"],["hard","She worked very hard."],["open","Open the magic box."],["example","Here is an example."],["begin","Let the show begin!"],["life","Life is an adventure."],
+["always","I will always be here."],["those","Look at those clouds."],["both","We both love stories."],["paper","Fold the paper carefully."],["together","Let's stay together."],["got","She got a gold star."],["group","A group of friends."],["often","We often visit Grandma."],["run","Run as fast as you can!"],["important","This is very important."],
+["until","Wait until the sun sets."],["children","The children played happily."],["side","On the other side."],["feet","Dip your feet in the stream."],["car","A little toy car."],["mile","One mile to the castle."],["night","A quiet starry night."],["walk","Walk through the meadow."],["white","A white fluffy cloud."],["sea","The sea was bright blue."],
+["began","The story began long ago."],["grow","Watch the flowers grow."],["took","She took a deep breath."],["river","The river flows gently."],["four","Four seasons in a year."],["carry","Carry the basket carefully."],["state","A happy state of mind."],["once","Once upon a time."],["book","Read a wonderful book."],["hear","Can you hear the birds?"],
+["stop","Stop and smell the roses."],["without","A day without rain."],["second","Wait just one second."],["later","See you later!"],["miss","I will miss you."],["idea","What a brilliant idea!"],["enough","That is enough for today."],["eat","Time to eat lunch!"],["face","A smiling happy face."],["watch","Watch the sunset."],
+["far","How far is the moon?"],["Indian","An Indian elephant."],["real","Is the magic real?"],["almost","We are almost there!"],["let","Let me help you."],["above","The rainbow arched above."],["girl","A clever little girl."],["sometimes","Sometimes I dream of flying."],["mountains","Snow-capped mountains."],["cut","Cut out the shapes."],
+["young","A young artist at work."],["talk","Let's talk about it."],["soon","We will arrive soon."],["list","Check the list."],["song","Sing a happy song."],["being","Being kind feels wonderful."],["leave","Don't leave me behind!"],["family","My family loves adventures."],["it's","It's going to be fun!"],["body","Move your whole body."],
+];
+
+const FRY_LIST_4 = [
+["color","Pick your favourite color."],["away","Put the toys away."],["red","A red winter coat."],["door","Open the secret door."],["sure","Are you sure?"],["become","She will become a star."],["top","Climb to the top!"],["ship","A pirate ship sailed by."],["across","Run across the field."],["today","Today is a great day."],
+["during","We sang during the trip."],["short","A short and sweet song."],["better","You are getting better!"],["best","My best friend ever."],["however","However, she kept trying."],["low","A low gentle hum."],["hours","We played for hours."],["black","A black cat crossed the road."],["products","Craft products everywhere!"],["happened","Something magical happened."],
+["whole","The whole class cheered."],["measure","Measure the ribbon."],["remember","Remember the magic word."],["early","Wake up early tomorrow."],["waves","Waves crashed on the shore."],["reached","She reached the hilltop."],["listen","Listen to the music."],["wind","The wind blew softly."],["rock","A smooth round rock."],["space","Outer space is amazing."],
+["covered","Snow covered the ground."],["fast","Run fast like a deer!"],["several","Several birds flew past."],["hold","Hold on tight!"],["himself","He made it himself."],["toward","Walk toward the light."],["five","High five!"],["step","One step at a time."],["morning","A bright sunny morning."],["passed","Time passed quickly."],
+["vowel","A is a vowel."],["true","Is the story true?"],["hundred","A hundred golden coins."],["against","Lean against the tree."],["pattern","A pretty flower pattern."],["numeral","Write the numeral five."],["table","Set the table neatly."],["north","Head north to the forest."],["slowly","Walk slowly and quietly."],["money","Save your money."],
+["map","Follow the treasure map."],["farm","A friendly little farm."],["pulled","She pulled open the curtain."],["draw","Draw a beautiful picture."],["voice","Use your reading voice."],["seen","Have you seen my kitten?"],["cold","A cold winter morning."],["cried","Oh no, she cried."],["plan","Let's make a plan."],["notice","Did you notice the clue?"],
+["south","Fly south for winter."],["sing","Sing along with me."],["war","Stories of long-ago wars."],["ground","Sit on the ground."],["fall","Leaves fall in autumn."],["king","The king wore a crown."],["town","A tiny seaside town."],["I'll","I'll be right there."],["unit","Finish the whole unit."],["figure","Can you figure it out?"],
+["certain","I am certain of that."],["field","Run through the field."],["travel","I love to travel."],["wood","A cabin made of wood."],["fire","Warm your hands by the fire."],["upon","Once upon a time."],["done","Well done, everyone!"],["English","English is fun to learn."],["road","A winding country road."],["half","Half a cup of sugar."],
+["ten","Count to ten."],["fly","Watch the kite fly high!"],["gave","She gave me a hug."],["box","Open the gift box."],["finally","She finally solved it!"],["wait","Wait for me, please!"],["correct","That answer is correct."],["oh","Oh, how wonderful!"],["quickly","She ran quickly home."],["person","A very kind person."],
+["became","She became very brave."],["shown","She was shown the way."],["minutes","Five more minutes!"],["strong","She is strong and kind."],["verb","Run is a verb."],["stars","Count all the stars."],["front","Stand at the front."],["feel","How do you feel today?"],["fact","Here is a fun fact."],["inches","Six inches of snow fell."],
+];
+
+const FRY_LIST_5 = [
+["street","Walk down the street."],["decided","She decided to be brave."],["contain","This box can contain gems."],["course","Of course you can!"],["surface","A smooth icy surface."],["produce","The farm will produce apples."],["building","A tall old building."],["ocean","The ocean is so vast."],["class","Our class had a party."],["note","Leave a little note."],
+["nothing","Nothing can stop us!"],["rest","Time to rest now."],["carefully","Open it carefully."],["scientists","Scientists study nature."],["inside","Come inside where it's warm."],["wheels","The wheels go round."],["stay","Stay a little longer."],["green","Green leaves everywhere."],["known","She is known for kindness."],["island","A tiny secret island."],
+["week","What a wonderful week!"],["less","Less sugar, please."],["machine","A fantastic machine."],["base","The base of the mountain."],["ago","Long, long ago."],["stood","She stood up tall."],["plane","The paper plane flew far."],["system","A clever filing system."],["behind","Look behind the curtain."],["ran","She ran to the finish line."],
+["round","A big round moon."],["boat","Row the little boat."],["game","Let's play a game!"],["force","Use gentle force."],["brought","She brought her paintbox."],["understand","I understand now!"],["warm","A warm woolly jumper."],["common","A common little bird."],["bring","Bring your sketchbook."],["explain","Can you explain it?"],
+["dry","Hang it out to dry."],["though","She smiled, though she was tired."],["language","English is a fun language."],["shape","A star shape."],["deep","A deep blue lake."],["thousands","Thousands of tiny stars."],["yes","Yes, I can do it!"],["clear","A clear sunny sky."],["equation","Solve the equation."],["yet","Not finished yet!"],
+["government","The town government met."],["filled","She filled her basket."],["heat","Feel the summer heat."],["full","The basket is full."],["hot","A hot cup of tea."],["check","Check your spelling."],["object","A shiny round object."],["am","I am ready!"],["rule","Follow the golden rule."],["among","Hidden among the flowers."],
+["noun","Dog is a noun."],["power","The power of words."],["cannot","I cannot wait!"],["able","She is able to swim."],["six","She is six years old."],["size","What size are your shoes?"],["dark","A dark enchanted forest."],["ball","Throw the ball!"],["material","Craft material everywhere."],["special","A very special gift."],
+["heavy","The box was too heavy."],["fine","Everything will be fine."],["pair","A pair of red boots."],["circle","Draw a perfect circle."],["include","Don't forget to include me."],["built","She built a fairy house."],["can't","I can't stop smiling!"],["matter","It doesn't matter."],["square","A square wooden block."],["syllables","Clap the syllables."],
+["perhaps","Perhaps it will snow."],["bill","A little yellow duck bill."],["felt","She felt so proud."],["suddenly","Suddenly the key glowed!"],["test","Time for a fun test."],["direction","Which direction now?"],["center","Stand in the center."],["farmers","The farmers grew pumpkins."],["ready","Are you ready?"],["anything","You can do anything!"],
+["divided","She divided the cake equally."],["general","A general sense of joy."],["energy","Full of energy today!"],["subject","My favourite subject."],["Europe","She dreamed of visiting Europe."],["moon","The moon shone brightly."],["region","A warm sunny region."],["return","Time to return home."],["believe","I believe in magic."],["dance","Let's dance in the rain!"],
+];
+
+const FRY_LIST_6 = [
+["members","All team members helped."],["picked","She picked a daisy."],["simple","A simple kind act."],["cells","Tiny plant cells."],["paint","Paint the sky pink."],["mind","Make up your mind."],["love","I love sunny mornings."],["cause","A cause worth helping."],["rain","Dancing in the rain."],["exercise","Morning exercise is fun."],
+["eggs","She decorated the eggs."],["train","The little train chugged along."],["blue","A bright blue butterfly."],["wish","Make a wish!"],["drop","A drop of honey."],["developed","She developed a new skill."],["window","Look out the window."],["difference","You make a difference."],["distance","A short distance to walk."],["heart","Follow your heart."],
+["sit","Sit here beside me."],["sum","The sum of two and three."],["summer","A perfect summer day."],["wall","A garden wall of stone."],["forest","A magical deep forest."],["probably","She will probably love it."],["legs","The puppy has muddy legs."],["sat","She sat under the tree."],["main","The main character is brave."],["winter","A snowy winter scene."],
+["wide","A wide open meadow."],["written","She has written a poem."],["length","The length of the ribbon."],["reason","A good reason to smile."],["kept","She kept her promise."],["interest","A keen interest in art."],["arms","Open your arms wide."],["brother","My brother helped me."],["race","Ready for the big race!"],["present","A lovely birthday present."],
+["beautiful","A beautiful sunset."],["store","Visit the craft store."],["job","You did a super job!"],["edge","The edge of the forest."],["past","Walk past the fountain."],["sign","Read the sign carefully."],["record","A new record time!"],["finished","She finished her painting."],["discovered","She discovered a clue."],["wild","A wild flower garden."],
+["happy","Such a happy moment."],["beside","Sit beside the stream."],["gone","The clouds have gone."],["sky","A clear evening sky."],["glass","A glass of lemonade."],["million","A million twinkling stars."],["west","The sun sets in the west."],["lay","She lay on the soft grass."],["weather","What lovely weather!"],["root","The root of the old tree."],
+["instruments","Musical instruments are fun."],["meet","Nice to meet you!"],["third","She came in third place."],["months","Many months of practice."],["paragraph","Write a short paragraph."],["raised","She raised her hand."],["represent","Stars represent dreams."],["soft","A soft cuddly bear."],["whether","Whether rain or shine."],["clothes","Pretty new clothes."],
+["flowers","Pick some flowers."],["shall","Shall we begin?"],["teacher","My teacher is wonderful."],["held","She held the lantern high."],["describe","Describe what you see."],["drive","A Sunday morning drive."],["cross","Cross the bridge safely."],["speak","Speak clearly and kindly."],["solve","Let's solve this puzzle."],["appear","Stars appear at night."],
+["metal","A shiny piece of metal."],["son","The farmer's son helped."],["either","Either way is fine."],["ice","Skating on thin ice."],["sleep","Time to sleep, goodnight."],["village","A friendly little village."],["factors","Many factors to consider."],["result","A wonderful result!"],["jumped","She jumped for joy!"],["snow","Fresh sparkling snow."],
+["ride","A pony ride through the meadow."],["care","Take care of your garden."],["floor","A wooden cottage floor."],["hill","Roll down the grassy hill."],["pushed","She pushed open the gate."],["baby","A sweet little baby."],["buy","Buy some paints."],["century","A story from last century."],["outside","Play outside in the sun."],["everything","Everything is wonderful."],
+];
+
+const FRY_LIST_7 = [
+["tall","A tall sunflower."],["already","She has already finished."],["instead","Draw instead of writing."],["phrase","A catchy little phrase."],["soil","Rich dark garden soil."],["bed","A cosy warm bed."],["copy","Copy the pattern."],["free","Free as a bird!"],["hope","I hope it snows today."],["spring","Flowers bloom in spring."],
+["case","A pencil case."],["laughed","Everyone laughed happily."],["nation","A nation of kind people."],["quite","She was quite amazed."],["type","What type of craft?"],["themselves","They did it themselves!"],["temperature","A warm temperature today."],["bright","A bright shining star."],["lead","Lead the way!"],["everyone","Everyone is welcome."],
+["method","A clever method."],["section","The craft section is here."],["lake","A calm blue lake."],["consonant","B is a consonant."],["within","Within the castle walls."],["dictionary","Look it up in the dictionary."],["hair","She braided her hair."],["age","A magical age."],["amount","A small amount of glitter."],["scale","A musical scale."],
+["pounds","Two pounds of flour."],["although","Although tired, she kept going."],["per","One sticker per page."],["broken","The spell was broken."],["moment","A special moment."],["tiny","A tiny fairy door."],["possible","Anything is possible!"],["gold","A pot of gold."],["milk","A glass of cold milk."],["quiet","A quiet afternoon."],
+["natural","Natural beauty everywhere."],["lot","She learned a lot today."],["stone","A stepping stone."],["act","Act out the story."],["build","Build a sandcastle."],["middle","In the middle of the forest."],["speed","Speed up a little!"],["count","Count the butterflies."],["cat","A fluffy orange cat."],["someone","Someone left a clue."],
+["sail","Set sail for adventure."],["rolled","The ball rolled downhill."],["bear","A teddy bear picnic."],["wonder","I wonder what's inside."],["smiled","She smiled with pride."],["angle","Draw an angle."],["fraction","A fraction of the cake."],["Africa","Stories from Africa."],["killed","The frost killed the flowers."],["melody","A sweet gentle melody."],
+["bottom","The bottom of the garden."],["trip","A lovely day trip."],["hole","A rabbit hole!"],["poor","A poor little duckling."],["let's","Let's go exploring!"],["fight","No need to fight."],["surprise","What a lovely surprise!"],["French","A French lullaby."],["died","The old tree died."],["beat","Beat the drum!"],
+["exactly","That is exactly right!"],["remain","Please remain seated."],["dress","A sparkly party dress."],["iron","An iron bridge."],["couldn't","She couldn't believe it!"],["fingers","Ten little fingers."],["row","A neat row of shells."],["least","At least try once."],["catch","Catch the falling star!"],["climbed","She climbed the old oak."],
+["wrote","She wrote a fairy tale."],["shouted","Hooray, she shouted!"],["continued","The adventure continued."],["itself","The door opened by itself."],["else","What else can we do?"],["plains","The open grassy plains."],["gas","A gas balloon floated up."],["England","A village in England."],["burning","A burning candle."],["design","Design a new craft."],
+["joined","She joined the adventure club."],["foot","One foot in front."],["law","A simple rule of law."],["ears","Bunny ears!"],["grass","Soft green grass."],["you're","You're doing brilliantly!"],["grew","The beanstalk grew tall."],["skin","Soft as a peach skin."],["valley","A peaceful green valley."],["cents","Fifty cents for a charm."],
+];
+
+const FRY_LIST_8 = [
+["key","The golden key glowed."],["president","The class president spoke."],["brown","A brown autumn leaf."],["trouble","No trouble at all!"],["cool","A cool gentle breeze."],["cloud","A fluffy white cloud."],["lost","The lost puppy was found."],["sent","She sent a kind letter."],["symbols","Ancient magical symbols."],["wear","Wear your warm boots."],
+["bad","Not a bad try!"],["save","Save some for later."],["experiment","A fun science experiment."],["engine","The little engine could!"],["alone","She was brave alone."],["drawing","A lovely drawing of flowers."],["east","The sun rises in the east."],["pay","Pay attention now."],["single","Every single one matters."],["touch","A gentle soft touch."],
+["information","Useful information here."],["express","Express your feelings."],["mouth","Open your mouth wide."],["yard","Play in the back yard."],["equal","All pieces are equal."],["decimal","A decimal point."],["yourself","Be proud of yourself!"],["control","Stay in control."],["practice","Practice makes perfect."],["report","A glowing school report."],
+["straight","Walk straight ahead."],["rise","Watch the sun rise."],["statement","A true statement."],["stick","A little wooden stick."],["party","A wonderful garden party."],["seeds","Plant tiny seeds."],["suppose","I suppose we could try."],["woman","A wise old woman."],["coast","Along the rocky coast."],["bank","The river bank was mossy."],
+["period","The end of a period."],["wire","A thin silver wire."],["choose","Choose your favourite."],["clean","A clean fresh start."],["visit","Visit the enchanted garden."],["bit","A little bit of magic."],["whose","Whose turn is it?"],["received","She received a gold star."],["garden","A secret walled garden."],["please","Yes, please!"],
+["strange","A strange glowing light."],["caught","She caught a snowflake."],["fell","Snow fell gently."],["team","Our team worked together."],["God","Thank God for rainbows."],["captain","The captain led bravely."],["direct","A direct path home."],["ring","A magic ring."],["serve","Happy to serve you."],["child","A curious little child."],
+["desert","A sandy golden desert."],["increase","Increase your word power."],["history","A history of adventure."],["cost","It didn't cost much."],["maybe","Maybe tomorrow!"],["business","Busy as a bee business."],["separate","Separate the colours."],["break","Take a short break."],["uncle","My uncle tells jokes."],["hunting","A treasure hunting game."],
+["flow","Watch the river flow."],["lady","A kind old lady."],["students","The students read together."],["human","Every human is unique."],["art","The art of crafting."],["feeling","A warm fuzzy feeling."],["supply","A good supply of crayons."],["corner","Just around the corner."],["electric","An electric blue spark."],["insects","Tiny garden insects."],
+["crops","The crops grew tall."],["tone","A gentle kind tone."],["hit","She hit the target!"],["sand","Soft golden sand."],["doctor","The kind village doctor."],["provide","Nature will provide."],["thus","And thus the quest began."],["capital","London is the capital."],["won't","I won't give up!"],["chair","Sit in the comfy chair."],
+["danger","Beware of danger ahead."],["fruit","Fresh summer fruit."],["rich","Rich in kindness."],["thick","A thick warm blanket."],["soldier","A brave little tin soldier."],["process","A step-by-step process."],["operate","Learn to operate it."],["guess","Can you guess the word?"],["necessary","Sleep is necessary."],["sharp","A sharp pencil."],
+];
+
+const FRY_LIST_9 = [
+["wing","A butterfly's delicate wing."],["create","Create something beautiful!"],["neighbor","A friendly neighbor waved."],["wash","Wash your hands, please."],["bat","A little brown bat."],["rather","I would rather paint."],["crowd","A cheerful crowd gathered."],["corn","Golden fields of corn."],["compare","Compare the two shapes."],["poem","She wrote a lovely poem."],
+["string","A piece of coloured string."],["bell","The school bell rang."],["depend","You can depend on me."],["meat","A Sunday roast meat."],["rub","Rub the lamp gently."],["tube","A tube of glitter glue."],["famous","A famous fairy tale."],["dollar","A shiny silver dollar."],["stream","A bubbling little stream."],["fear","Nothing to fear here."],
+["sight","A wonderful sight to see."],["thin","A thin sheet of paper."],["triangle","Draw a triangle."],["planet","Our beautiful planet."],["hurry","Hurry, let's go!"],["chief","The chief gave a speech."],["colony","An ant colony at work."],["clock","The clock struck twelve."],["mine","This treasure is mine!"],["tie","Tie a pretty bow."],
+["enter","Enter the magic portal."],["major","A major discovery!"],["fresh","Fresh baked cookies."],["search","Search for hidden clues."],["send","Send a kind message."],["yellow","Bright yellow sunshine."],["gun","A water gun for summer."],["allow","Allow time to dream."],["print","Print your name neatly."],["dead","The old batteries are dead."],
+["spot","A perfect picnic spot."],["desert","A cactus in the desert."],["suit","A suit of armour."],["current","The river current was gentle."],["lift","Lift the heavy lid."],["rose","A pink rose bloomed."],["arrive","We will arrive soon."],["master","She will master this word!"],["track","Follow the deer track."],["parent","My parent helps me read."],
+["shore","Walk along the shore."],["division","Learn about division."],["sheet","A clean sheet of paper."],["substance","A sparkly substance."],["favor","Do me a favor, please."],["connect","Connect the dots."],["post","A fence post."],["spend","Spend time with friends."],["chord","A musical chord."],["fat","A fat fluffy cat."],
+["glad","I am so glad!"],["original","An original idea."],["share","Share with your friends."],["station","The train station."],["dad","My dad is the best."],["bread","Fresh warm bread."],["charge","She is in charge today."],["proper","The proper way to do it."],["bar","A granola bar for a snack."],["offer","A kind offer to help."],
+["segment","A segment of orange."],["slave","Stories about brave slaves."],["duck","A little yellow duck."],["instant","In an instant it changed!"],["market","A colourful craft market."],["degree","A warm twenty degrees."],["populate","Animals populate the forest."],["chick","A fluffy baby chick."],["dear","Dear diary, today was fun."],["enemy","The hero faced the enemy."],
+["reply","She gave a clever reply."],["drink","Have a cool drink."],["occur","Surprises can occur."],["support","Support your teammates."],["speech","A wonderful speech."],["nature","Love nature always."],["range","A mountain range."],["steam","Steam from the kettle."],["motion","A gentle rocking motion."],["path","A winding garden path."],
+["liquid","A sparkling purple liquid."],["log","Sit on the old log."],["meant","She meant to say thank you."],["quotient","Find the quotient."],["teeth","Brush your teeth well."],["shell","A pretty seashell."],["neck","A scarf around her neck."],["oxygen","Plants give us oxygen."],["sugar","A spoon of sugar."],["death","The death of the old king."],
+];
+
+const FRY_LIST_10 = [
+["pretty","A pretty little garden."],["skill","A new craft skill."],["women","Brave women explorers."],["season","Autumn is my favourite season."],["solution","She found the solution!"],["magnet","A colourful magnet."],["silver","A silver moonbeam."],["thank","Thank you so much!"],["branch","A branch of cherry blossoms."],["match","Find the matching pair."],
+["suffix","Add a suffix to the word."],["especially","I especially love crafts."],["fig","A sweet ripe fig."],["afraid","Don't be afraid!"],["huge","A huge adventure awaits."],["sister","My sister and I played."],["steel","A bridge made of steel."],["discuss","Let's discuss the story."],["forward","Step forward bravely."],["similar","They look very similar."],
+["guide","A helpful guide book."],["experience","What an experience!"],["score","A perfect score!"],["apple","A crunchy red apple."],["bought","She bought new paintbrushes."],["led","She led the expedition."],["pitch","The perfect pitch."],["coat","A warm winter coat."],["mass","A mass of wildflowers."],["card","A handmade birthday card."],
+["band","A colourful rubber band."],["rope","Skip the rope!"],["slip","Be careful not to slip."],["win","I hope we win!"],["dream","A wonderful dream."],["evening","A calm summer evening."],["condition","In perfect condition."],["feed","Feed the little birds."],["tool","The right tool for the job."],["total","The total is twenty."],
+["basic","The basic steps first."],["smell","A lovely sweet smell."],["valley","A hidden green valley."],["nor","Neither rain nor snow."],["double","Double the fun!"],["seat","Take your seat."],["continue","Please continue reading."],["block","A colourful building block."],["chart","A star chart on the wall."],["hat","A floppy sun hat."],
+["sell","She will sell lemonade."],["success","Hard work leads to success."],["company","A company of dancers."],["subtract","Subtract five from ten."],["event","A special school event."],["particular","A particular shade of blue."],["deal","A great deal of fun."],["swim","Let's go for a swim!"],["term","A new school term."],["opposite","The opposite of dark is light."],
+["wife","The farmer's wife baked."],["shoes","Sparkly red shoes."],["shoulder","A pat on the shoulder."],["spread","Spread the jam evenly."],["arrange","Arrange the flowers nicely."],["camp","A summer camp by the lake."],["invent","She will invent something cool."],["cotton","Soft cotton fabric."],["born","A baby lamb was born."],["determine","Determine the right answer."],
+["quart","A quart of milk."],["nine","She counted to nine."],["truck","A bright red truck."],["noise","A happy joyful noise."],["level","The next level awaits!"],["chance","Give it one more chance."],["gather","Gather round for a story."],["shop","A little craft shop."],["stretch","Stretch your arms high."],["throw","Throw the ball gently."],
+["shine","Let your light shine!"],["property","A countryside property."],["column","A tall marble column."],["molecule","A tiny water molecule."],["select","Select the best word."],["wrong","Nothing wrong with trying."],["gray","A gray rainy day."],["repeat","Repeat after me."],["require","Recipes require patience."],["broad","A broad happy smile."],
+["prepare","Prepare for the adventure."],["salt","A pinch of salt."],["nose","A little button nose."],["plural","Add s to make it plural."],["anger","Take a breath when you feel anger."],["claim","She can claim her prize."],["continent","A faraway continent."],["happen","Amazing things happen."],["safe","Stay safe and warm."],["complete","The puzzle is complete!"],
+];
+
+const ALL_FRY = [FRY_LIST_1,FRY_LIST_2,FRY_LIST_3,FRY_LIST_4,FRY_LIST_5,FRY_LIST_6,FRY_LIST_7,FRY_LIST_8,FRY_LIST_9,FRY_LIST_10];
+
+// ── World Themes ──────────────────────────────────────────────
+const WORLDS = [
+  { id:1, name:"The Enchanted Forest", icon:"🌳", color:"#2d6a4f", bg:"#1b4332" },
+  { id:2, name:"The Crystal Cave", icon:"💎", color:"#7b2cbf", bg:"#3c096c" },
+  { id:3, name:"The Cloud Kingdom", icon:"☁️", color:"#0077b6", bg:"#023e8a" },
+  { id:4, name:"The Golden Desert", icon:"🏜️", color:"#e76f51", bg:"#6c3428" },
+  { id:5, name:"The Frozen Peaks", icon:"❄️", color:"#48cae4", bg:"#0a3d5c" },
+  { id:6, name:"The Flower Meadow", icon:"🌸", color:"#e07aab", bg:"#5c2340" },
+  { id:7, name:"The Starlight Tower", icon:"🌟", color:"#f4a261", bg:"#5c3d1a" },
+  { id:8, name:"The Ocean Depths", icon:"🐚", color:"#219ebc", bg:"#14374a" },
+  { id:9, name:"The Dragon's Library", icon:"📖", color:"#8338ec", bg:"#3a1078" },
+  { id:10, name:"The Rainbow Summit", icon:"🌈", color:"#f72585", bg:"#4a0e2a" },
+];
+
+// ── Utility ───────────────────────────────────────────────────
+const shuffle = (a) => { const b=[...a]; for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
+const getToday = () => new Date().toISOString().slice(0,10);
+const xpForLevel = (lv) => lv * 100;
+
+const DEFAULT_STATS = {
+  xp:0, level:1, streak:0, lastDate:null, totalSessions:0,
+  currentWorld:1, currentLevel:1,
+  wordProgress:{}, // { "wordIndex": { stage, correctStreak, missCount, nextReview, lastSeen } }
+  sessionLog:[], stars:0, wordsLearned:0,
+  placementDone:false,
+};
+
+// Get word by global index (0-999)
+const getWord = (idx) => {
+  const listIdx = Math.floor(idx/100);
+  const wordIdx = idx % 100;
+  if(listIdx>=10) return null;
+  const entry = ALL_FRY[listIdx][wordIdx];
+  return entry ? { word:entry[0], sentence:entry[1], index:idx } : null;
+};
+
+// Get all words for a world (100 words)
+const getWorldWords = (worldId) => {
+  return ALL_FRY[worldId-1].map((entry,i) => ({
+    word:entry[0], sentence:entry[1], index:(worldId-1)*100+i
+  }));
+};
+
+// Get words for a specific level within a world (10 words)
+const getLevelWords = (worldId, levelNum) => {
+  const start = (levelNum-1)*10;
+  return ALL_FRY[worldId-1].slice(start,start+10).map((entry,i) => ({
+    word:entry[0], sentence:entry[1], index:(worldId-1)*100+start+i
+  }));
+};
+
+// Speak word using Web Speech API
+const speakWord = (word, rate=0.85) => {
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang="en-US"; u.rate=rate; u.pitch=1.0;
+  window.speechSynthesis.speak(u);
+};
+
+const speakSentence = (s) => speakWord(s, 0.8);
+
+// ══════════════════════════════════════════════════════════════
+// MAIN APP COMPONENT
+// ══════════════════════════════════════════════════════════════
+function MagicKeySpeller() {
+  const [screen, setScreen] = useState("loading");
+  const [stats, setStats] = useState(null);
+  const [gameMode, setGameMode] = useState(null); // crystal, starfill, keyspell, warmup, challenge
+  const [gameState, setGameState] = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const [sessionScore, setSessionScore] = useState({correct:0,total:0,xp:0});
+  const [timer, setTimer] = useState(0);
+  const [selectedWorld, setSelectedWorld] = useState(1);
+  const [parentPin, setParentPin] = useState("");
+  const [showNotice, setShowNotice] = useState(null);
+  const [parentTab, setParentTab] = useState("overview");
+  const [placementState, setPlacementState] = useState(null);
+  const [buildLetters, setBuildLetters] = useState([]);
+  const [sentenceHint, setSentenceHint] = useState(null);
+  const [selectedLevel, setSelectedLevel] = useState(1);
+  const timerRef = useRef(null);
+  const maxTime = 10 * 60; // 10 minutes
+
+  // ── Load ────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const saved = Storage.get("mks_stats");
+      if(saved) setStats({...DEFAULT_STATS,...saved});
+      else setStats({...DEFAULT_STATS});
+    } catch { setStats({...DEFAULT_STATS}); }
+    setScreen("home");
+  },[]);
+
+  const saveStats = useCallback((s) => {
+    setStats(s);
+    Storage.set("mks_stats", s);
+  },[]);
+
+  // ── Timer ───────────────────────────────────────────────
+  useEffect(() => {
+    if((screen==="activity"||screen==="challenge") && timer>0) {
+      timerRef.current = setInterval(()=>{
+        setTimer(t=>{
+          if(t<=1){ clearInterval(timerRef.current); endSession(); return 0; }
+          return t-1;
+        });
+      },1000);
+      return ()=>clearInterval(timerRef.current);
+    }
+  },[screen]);
+
+  // ── Streak ──────────────────────────────────────────────
+  const updateStreak = (s) => {
+    const today=getToday();
+    const yest=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    if(s.lastDate===today) return s;
+    if(s.lastDate===yest) return {...s,streak:s.streak+1,lastDate:today};
+    return {...s,streak:1,lastDate:today};
+  };
+
+  // ── Get word progress ─────────────────────────────────────
+  const getWP = (idx) => stats?.wordProgress?.[idx] || {stage:0,correctStreak:0,missCount:0,nextReview:null,lastSeen:null};
+
+  // ── Words due for review ──────────────────────────────────
+  const getReviewWords = () => {
+    if(!stats) return [];
+    const today = getToday();
+    return Object.entries(stats.wordProgress||{})
+      .filter(([_,wp])=> wp.nextReview && wp.nextReview<=today && wp.stage<4)
+      .map(([idx])=> getWord(parseInt(idx)))
+      .filter(Boolean)
+      .slice(0,10);
+  };
+
+  // ── Update word progress after answer ─────────────────────
+  const updateWordProgress = (wordIdx, correct) => {
+    const wp = getWP(wordIdx);
+    const today = getToday();
+    let newWP;
+    if(correct) {
+      const newStreak = wp.correctStreak+1;
+      let newStage = wp.stage;
+      if(newStreak>=2 && wp.stage<1) newStage=1;
+      if(newStreak>=3 && wp.stage<2) newStage=2;
+      if(newStreak>=4 && wp.stage<3) newStage=3;
+      if(newStreak>=5 && wp.stage>=3) newStage=4; // mastered
+      const days = [1,2,4,7,14][Math.min(newStreak,4)];
+      const next = new Date(Date.now()+days*86400000).toISOString().slice(0,10);
+      newWP = {stage:newStage, correctStreak:newStreak, missCount:wp.missCount, nextReview:next, lastSeen:today};
+    } else {
+      newWP = {stage:Math.max(0,wp.stage-1), correctStreak:0, missCount:wp.missCount+1, nextReview:today, lastSeen:today};
+    }
+    return newWP;
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // PLACEMENT TEST
+  // ══════════════════════════════════════════════════════════
+  const startPlacement = () => {
+    // Pick 5 words from each list (50 total), progressive
+    const testWords = [];
+    for(let list=0; list<10; list++){
+      const indices = shuffle([0,1,2,3,4,5,6,7,8,9]).slice(0,5);
+      indices.forEach(i=> testWords.push({ listIdx:list, wordIdx:i, globalIdx:list*100+i, word:ALL_FRY[list][i][0] }));
+    }
+    setPlacementState({ words:testWords, current:0, known:[], phase:"recognize", spellWord:null, spellInput:[] });
+    setScreen("placement");
+  };
+
+  const handlePlacementKnow = (knows) => {
+    const ps = placementState;
+    if(ps.phase==="recognize") {
+      if(knows) {
+        // verify with spell check
+        setPlacementState({...ps, phase:"spell", spellWord:ps.words[ps.current], spellInput:[]});
+      } else {
+        // move to next
+        const next = ps.current+1;
+        if(next>=ps.words.length) finishPlacement(ps.known);
+        else setPlacementState({...ps, current:next});
+      }
+    }
+  };
+
+  const handlePlacementSpell = () => {
+    const ps = placementState;
+    const spelled = buildLetters.join("");
+    const correct = ps.spellWord.word;
+    const isCorrect = spelled.toLowerCase()===correct.toLowerCase();
+    const newKnown = isCorrect ? [...ps.known, ps.spellWord.globalIdx] : ps.known;
+
+    setFeedback({correct:isCorrect, message:isCorrect?"✨ Great!":"Not quite!"});
+    setTimeout(()=>{
+      setFeedback(null);
+      setBuildLetters([]);
+      const next = ps.current+1;
+      if(next>=ps.words.length) finishPlacement(newKnown);
+      else setPlacementState({...ps, current:next, known:newKnown, phase:"recognize", spellWord:null, spellInput:[]});
+    },1000);
+  };
+
+  const finishPlacement = (knownIndices) => {
+    // Find starting world: first list where <3 words are known
+    let startWorld = 1;
+    for(let list=0;list<10;list++){
+      const knownInList = knownIndices.filter(idx=> Math.floor(idx/100)===list).length;
+      if(knownInList<3){ startWorld=list+1; break; }
+      if(list===9) startWorld=10;
+    }
+    // Mark known words as stage 2
+    const wp = {...(stats?.wordProgress||{})};
+    knownIndices.forEach(idx=>{
+      wp[idx]={stage:2,correctStreak:3,missCount:0,nextReview:new Date(Date.now()+3*86400000).toISOString().slice(0,10),lastSeen:getToday()};
+    });
+    const newStats = {...stats, placementDone:true, currentWorld:startWorld, currentLevel:1, wordProgress:wp, wordsLearned:knownIndices.length};
+    saveStats(newStats);
+    setShowNotice(`Starting from World ${startWorld}: ${WORLDS[startWorld-1].name}! ${knownIndices.length} words already known.`);
+    setTimeout(()=>setShowNotice(null),4000);
+    setScreen("home");
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // START SESSION
+  // ══════════════════════════════════════════════════════════
+  const startSession = (world, level, mode) => {
+    setSelectedWorld(world);
+    setGameMode(mode);
+    setTimer(maxTime);
+    setSessionScore({correct:0,total:0,xp:0});
+    setFeedback(null);
+    setBuildLetters([]);
+    setSentenceHint(null);
+
+    if(mode==="warmup") {
+      const reviewWords = getReviewWords();
+      if(reviewWords.length===0) {
+        setShowNotice("No words to review yet! Try a spelling game instead.");
+        setTimeout(()=>setShowNotice(null),2500);
+        return;
+      }
+      generateGameQuestion(reviewWords, 0, "warmup");
+    } else if(mode==="challenge") {
+      const words = shuffle(getLevelWords(world,level)).slice(0,15);
+      setTimer(60);
+      generateGameQuestion(words, 0, "challenge");
+    } else {
+      const words = getLevelWords(world, level);
+      generateGameQuestion(words, 0, mode);
+    }
+    setScreen(mode==="challenge"?"challenge":"activity");
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // GENERATE QUESTION
+  // ══════════════════════════════════════════════════════════
+  const generateGameQuestion = (words, qIdx, mode) => {
+    if(qIdx >= words.length) { endSession(); return; }
+    const w = words[qIdx];
+    const wp = getWP(w.index);
+    const showHint = wp.missCount >= 2;
+
+    if(mode==="warmup") {
+      setGameState({ mode, words, qIdx, word:w, showHint, type:"flashcard" });
+      speakWord(w.word);
+    } else if(mode==="crystal") {
+      const letters = shuffle(w.word.split(""));
+      // add 1-2 distractors for words > 2 letters
+      const alphabet = "abcdefghijklmnopqrstuvwxyz";
+      let distractors = [];
+      if(w.word.length > 2) {
+        const unused = alphabet.split("").filter(c=>!w.word.includes(c));
+        distractors = shuffle(unused).slice(0, Math.min(2, Math.max(1, 4-w.word.length)));
+      }
+      const available = shuffle([...letters,...distractors]);
+      setGameState({ mode, words, qIdx, word:w, showHint, available, revealed:true });
+      speakWord(w.word);
+      // Flash word for 2 seconds then hide
+      setTimeout(()=> setGameState(prev=> prev?{...prev, revealed:false}:prev), 2000);
+      setBuildLetters([]);
+    } else if(mode==="starfill") {
+      // Remove 1-2 letters and replace with blanks
+      const wordArr = w.word.split("");
+      const numBlanks = w.word.length<=3 ? 1 : 2;
+      const blankPositions = shuffle([...Array(wordArr.length).keys()]).slice(0,numBlanks);
+      const blankedLetters = blankPositions.map(p=>wordArr[p]);
+      const display = wordArr.map((c,i)=> blankPositions.includes(i)?"⭐":c);
+      // options: correct letters + distractors
+      const alphabet = "abcdefghijklmnopqrstuvwxyz";
+      const distractors = shuffle(alphabet.split("").filter(c=>!blankedLetters.includes(c))).slice(0,4);
+      const options = shuffle([...blankedLetters,...distractors]);
+      setGameState({ mode, words, qIdx, word:w, showHint, display, blankPositions, blankedLetters, options, filled:new Array(numBlanks).fill(null), currentBlank:0 });
+      speakWord(w.word);
+    } else if(mode==="keyspell") {
+      setGameState({ mode, words, qIdx, word:w, showHint });
+      setBuildLetters([]);
+      speakWord(w.word);
+    } else if(mode==="challenge") {
+      // Challenge mode uses keyspell
+      setGameState({ mode:"challenge", words, qIdx, word:w, showHint:false });
+      setBuildLetters([]);
+      speakWord(w.word);
+    }
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // HANDLE ANSWERS
+  // ══════════════════════════════════════════════════════════
+
+  // Crystal Letters: check built word
+  const handleCrystalCheck = () => {
+    if(!gameState||feedback) return;
+    const built = buildLetters.join("");
+    const correct = gameState.word.word;
+    const isCorrect = built.toLowerCase()===correct.toLowerCase();
+    const xp = isCorrect?15:2;
+
+    const newWP = updateWordProgress(gameState.word.index, isCorrect);
+    const newProgress = {...stats.wordProgress, [gameState.word.index]:newWP};
+
+    setFeedback({correct:isCorrect, message:isCorrect?"✨ Brilliant Spell!": `The word is: ${correct}`});
+    if(isCorrect) speakWord(correct);
+    setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
+    setStats(prev=>({...prev, wordProgress:newProgress}));
+
+    setTimeout(()=>{
+      setFeedback(null);
+      setBuildLetters([]);
+      generateGameQuestion(gameState.words, gameState.qIdx+1, gameState.mode);
+    }, isCorrect?1200:2500);
+  };
+
+  // Star Fill: select letter for blank
+  const handleStarFill = (letter) => {
+    if(!gameState||feedback) return;
+    const gs = gameState;
+    const newFilled = [...gs.filled];
+    newFilled[gs.currentBlank] = letter;
+
+    if(gs.currentBlank+1 < gs.blankPositions.length) {
+      setGameState({...gs, filled:newFilled, currentBlank:gs.currentBlank+1});
+      return;
+    }
+
+    // All blanks filled, check
+    const isCorrect = newFilled.every((l,i)=> l===gs.blankedLetters[i]);
+    const xp = isCorrect?15:2;
+    const newWP = updateWordProgress(gs.word.index, isCorrect);
+    const newProgress = {...stats.wordProgress, [gs.word.index]:newWP};
+
+    setFeedback({correct:isCorrect, message:isCorrect?"⭐ Star Filled!": `The word is: ${gs.word.word}`});
+    if(isCorrect) speakWord(gs.word.word);
+    setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
+    setStats(prev=>({...prev, wordProgress:newProgress}));
+
+    setTimeout(()=>{
+      setFeedback(null);
+      generateGameQuestion(gs.words, gs.qIdx+1, gs.mode);
+    }, isCorrect?1200:2500);
+  };
+
+  // Key Spell: full blind spell check
+  const handleKeySpellCheck = () => {
+    if(!gameState||feedback) return;
+    const built = buildLetters.join("");
+    const correct = gameState.word.word;
+    const isCorrect = built.toLowerCase()===correct.toLowerCase();
+    const xp = isCorrect?20:2;
+
+    const newWP = updateWordProgress(gameState.word.index, isCorrect);
+    const newProgress = {...stats.wordProgress, [gameState.word.index]:newWP};
+
+    setFeedback({correct:isCorrect, message:isCorrect?"🗝️ Key Unlocked!": `The word is: ${correct}`});
+    if(isCorrect) speakWord(correct);
+    setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
+    setStats(prev=>({...prev, wordProgress:newProgress}));
+
+    setTimeout(()=>{
+      setFeedback(null);
+      setBuildLetters([]);
+      generateGameQuestion(gameState.words, gameState.qIdx+1, gameState.mode);
+    }, isCorrect?1200:2500);
+  };
+
+  // Warmup: flashcard response
+  const handleWarmupAnswer = (knew) => {
+    if(!gameState||feedback) return;
+    const gs = gameState;
+    if(knew) {
+      const newWP = updateWordProgress(gs.word.index, true);
+      setStats(prev=>({...prev, wordProgress:{...prev.wordProgress, [gs.word.index]:newWP}}));
+      setSessionScore(p=>({...p, correct:p.correct+1, total:p.total+1, xp:p.xp+5}));
+    } else {
+      setSessionScore(p=>({...p, total:p.total+1}));
+      // Show sentence hint for missed words
+      setSentenceHint(gs.word.sentence);
+      setTimeout(()=> setSentenceHint(null), 2500);
+    }
+    setTimeout(()=>{
+      generateGameQuestion(gs.words, gs.qIdx+1, "warmup");
+    }, knew?600:2800);
+  };
+
+  // Challenge: quick spell
+  const handleChallengeCheck = () => {
+    if(!gameState||feedback) return;
+    const built = buildLetters.join("");
+    const correct = gameState.word.word;
+    const isCorrect = built.toLowerCase()===correct.toLowerCase();
+    const xp = isCorrect?10:0;
+
+    setFeedback({correct:isCorrect, message:isCorrect?"⚡ Fast!": correct});
+    setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
+
+    setTimeout(()=>{
+      setFeedback(null);
+      setBuildLetters([]);
+      generateGameQuestion(gameState.words, gameState.qIdx+1, "challenge");
+    }, isCorrect?600:1500);
+  };
+
+  // ── End Session ───────────────────────────────────────────
+  const endSession = () => {
+    clearInterval(timerRef.current);
+    if(!stats) return;
+    const accuracy = sessionScore.total>0 ? Math.round((sessionScore.correct/sessionScore.total)*100) : 0;
+    const bonusXp = accuracy>=80?30:accuracy>=60?15:0;
+    const totalXp = sessionScore.xp + bonusXp;
+    const newXp = stats.xp + totalXp;
+    let newLevel = stats.level;
+    let rem = newXp;
+    while(rem>=xpForLevel(newLevel)){ rem-=xpForLevel(newLevel); newLevel++; }
+
+    const stars = accuracy>=90?3:accuracy>=70?2:accuracy>=50?1:0;
+    const mastered = Object.values(stats.wordProgress||{}).filter(wp=>wp.stage>=4).length;
+
+    const entry = {
+      date:new Date().toISOString(), world:selectedWorld, mode:gameMode,
+      correct:sessionScore.correct, total:sessionScore.total, accuracy, xp:totalXp, stars,
+      duration:maxTime-timer,
+    };
+
+    const newStats = updateStreak({
+      ...stats, xp:newXp, level:newLevel, totalSessions:stats.totalSessions+1,
+      stars:stats.stars+stars, wordsLearned:mastered,
+      sessionLog:[...(stats.sessionLog||[]),entry],
+    });
+    saveStats(newStats);
+    setSessionScore(p=>({...p, xp:totalXp, stars, accuracy, bonusXp}));
+    setScreen("results");
+  };
+
+  // ── Reset ─────────────────────────────────────────────────
+  const resetAll = () => {
+    saveStats({...DEFAULT_STATS});
+    setScreen("home"); setParentPin("");
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // KEYBOARD COMPONENT
+  // ══════════════════════════════════════════════════════════
+  const Keyboard = ({onCheck, disabled}) => {
+    const rows = [["q","w","e","r","t","y","u","i","o","p"],["a","s","d","f","g","h","j","k","l"],["z","x","c","v","b","n","m"]];
+    return (
+      <div style={{width:"100%",maxWidth:400,margin:"0 auto"}}>
+        {rows.map((row,ri) => (
+          <div key={ri} style={{display:"flex",justifyContent:"center",gap:3,marginBottom:3}}>
+            {ri===2 && <div style={{width:16}}/>}
+            {row.map(k=>(
+              <button key={k} disabled={disabled}
+                onClick={()=>!disabled && setBuildLetters(p=>[...p,k])}
+                style={{...S.kbKey, opacity:disabled?0.4:1}}>
+                {k}
+              </button>
+            ))}
+            {ri===2 && (
+              <button onClick={()=>setBuildLetters(p=>p.slice(0,-1))} style={{...S.kbKey,width:40,background:"#c0392b",fontSize:14}}>
+                ⌫
+              </button>
+            )}
+          </div>
+        ))}
+        <div style={{display:"flex",gap:6,justifyContent:"center",marginTop:6}}>
+          <button onClick={()=>setBuildLetters([])} style={{...S.smallBtn,background:"#7f8c8d"}} disabled={disabled}>Clear</button>
+          <button onClick={onCheck} style={{...S.smallBtn,background:"#27ae60"}} disabled={disabled||buildLetters.length===0}>Check ✓</button>
+        </div>
+      </div>
+    );
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // TIMER BAR
+  // ══════════════════════════════════════════════════════════
+  const TimerBar = ({sec,max}) => {
+    const pct=Math.max(0,(sec/max)*100);
+    const m=Math.floor(sec/60), s=sec%60;
+    const col=pct>50?"#27ae60":pct>25?"#f39c12":"#e74c3c";
+    return (
+      <div style={{display:"flex",alignItems:"center",gap:6}}>
+        <div style={{flex:1,height:10,background:"#1a1a2e",borderRadius:5,overflow:"hidden"}}>
+          <div style={{width:`${pct}%`,height:"100%",background:col,transition:"width 1s linear",borderRadius:5}}/>
+        </div>
+        <span style={{fontFamily:"sans-serif",fontWeight:600,fontSize:13,color:col,minWidth:42,textAlign:"right"}}>
+          {m}:{s.toString().padStart(2,"0")}
+        </span>
+      </div>
+    );
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // RENDERS
+  // ══════════════════════════════════════════════════════════
+
+  if(!stats || screen==="loading") {
+    return (
+      <div style={S.center}>
+        <div style={{fontSize:56,marginBottom:12,animation:"pulse 1.5s infinite"}}>🗝️</div>
+        <div style={S.loadText}>Unlocking the Magic Key...</div>
+        
+      </div>
+    );
+  }
+
+
+  // ── HOME ────────────────────────────────────────────────
+  if(screen==="home") {
+    const todaySessions = (stats.sessionLog||[]).filter(s=>s.date?.startsWith(getToday())).length;
+    const mastered = Object.values(stats.wordProgress||{}).filter(wp=>wp.stage>=4).length;
+    const reviewCount = getReviewWords().length;
+    return (
+      <div style={S.page}>
+        <div style={S.header}>
+          <div style={S.logoArea}>
+            <span style={{fontSize:36,animation:"float 3s ease-in-out infinite"}}>🗝️</span>
+            <div>
+              <div style={S.logoTitle}>MAGIC KEY</div>
+              <div style={S.logoSub}>Speller</div>
+            </div>
+          </div>
+          <button onClick={()=>setScreen("parentPin")} style={S.iconBtn}>👨‍👩‍👧</button>
+        </div>
+
+        <div style={S.statsBar}>
+          <div style={S.statChip}><span style={{fontSize:18}}>🔥</span><div><div style={S.statNum}>{stats.streak}</div><div style={S.statLabel}>Streak</div></div></div>
+          <div style={S.statChip}><span style={{fontSize:18}}>⭐</span><div><div style={S.statNum}>{stats.stars}</div><div style={S.statLabel}>Stars</div></div></div>
+          <div style={S.statChip}><span style={{fontSize:18}}>📚</span><div><div style={S.statNum}>{mastered}</div><div style={S.statLabel}>Learned</div></div></div>
+          <div style={S.statChip}><span style={{fontSize:18}}>🗝️</span><div><div style={S.statNum}>{todaySessions}/3</div><div style={S.statLabel}>Today</div></div></div>
+        </div>
+
+        {/* XP Bar */}
+        <div style={{padding:"0 20px",marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:14,color:"#f4a261"}}>Lv.{stats.level}</span>
+            <div style={{flex:1,height:10,background:"#1a1a2e",borderRadius:5,overflow:"hidden"}}>
+              <div style={{width:`${((stats.xp%xpForLevel(stats.level))/xpForLevel(stats.level))*100}%`,height:"100%",background:"linear-gradient(90deg,#f4a261,#e76f51)",borderRadius:5,transition:"width 0.5s"}}/>
+            </div>
+            <span style={{fontFamily:"system-ui,-apple-system,sans-serif",fontSize:11,color:"#888"}}>{stats.xp%xpForLevel(stats.level)}/{xpForLevel(stats.level)}</span>
+          </div>
+        </div>
+
+        {!stats.placementDone && (
+          <button onClick={startPlacement} style={{...S.mainBtn,background:"linear-gradient(135deg,#8338ec,#3a86ff)"}}>
+            <span style={{fontSize:28}}>🔮</span>
+            <div style={{flex:1,textAlign:"left"}}>
+              <div style={S.mainBtnTitle}>Take the Placement Test</div>
+              <div style={S.mainBtnSub}>Find your starting level!</div>
+            </div>
+            <span style={{fontSize:22}}>▶</span>
+          </button>
+        )}
+
+        <button onClick={()=>setScreen("map")} style={S.mainBtn}>
+          <span style={{fontSize:28,animation:"float 2s ease-in-out infinite"}}>🗝️</span>
+          <div style={{flex:1,textAlign:"left"}}>
+            <div style={S.mainBtnTitle}>Start Adventure!</div>
+            <div style={S.mainBtnSub}>Explore worlds & spell words</div>
+          </div>
+          <span style={{fontSize:22}}>▶</span>
+        </button>
+
+        {reviewCount>0 && (
+          <button onClick={()=>startSession(stats.currentWorld,stats.currentLevel,"warmup")} style={{...S.mainBtn,background:"linear-gradient(135deg,#e07aab,#c77dba)"}}>
+            <span style={{fontSize:28}}>🔄</span>
+            <div style={{flex:1,textAlign:"left"}}>
+              <div style={S.mainBtnTitle}>Review Words ({reviewCount})</div>
+              <div style={S.mainBtnSub}>Quick warm-up flashcards</div>
+            </div>
+            <span style={{fontSize:22}}>▶</span>
+          </button>
+        )}
+
+        {todaySessions>=3 && (
+          <div style={S.noticeGreen}>🎉 Daily goal complete! Great job! Come back tomorrow!</div>
+        )}
+
+        {stats.totalSessions>0 && (
+          <div style={S.recentBox}>
+            <div style={S.sectionTitle}>Recent Adventures</div>
+            {(stats.sessionLog||[]).slice(-3).reverse().map((s,i)=>(
+              <div key={i} style={S.recentRow}>
+                <span>{WORLDS[s.world-1]?.icon}</span>
+                <span style={{flex:1,fontSize:13,fontWeight:600}}>{WORLDS[s.world-1]?.name?.split(" ").slice(1).join(" ")}</span>
+                <span style={{color:s.accuracy>=80?"#27ae60":s.accuracy>=60?"#f39c12":"#e74c3c",fontWeight:700,fontSize:13}}>{s.accuracy}%</span>
+                <span style={{fontSize:13}}>{"⭐".repeat(s.stars||0)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showNotice && <div style={S.toast}>{showNotice}</div>}
+      </div>
+    );
+  }
+
+  // ── WORLD MAP ─────────────────────────────────────────────
+  if(screen==="map") {
+    const currentW = stats.currentWorld||1;
+    const currentL = stats.currentLevel||1;
+    return (
+      <div style={S.page}>
+        
+        <div style={S.headerSm}>
+          <button onClick={()=>setScreen("home")} style={S.backBtn}>← Back</button>
+          <div style={S.headerTitle}>Adventure Map</div>
+          <div style={{width:60}}/>
+        </div>
+
+        <div style={{padding:"12px 16px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {WORLDS.map((w) => {
+              const unlocked = w.id <= currentW;
+              const isCurrent = w.id === selectedWorld;
+              const wordsInWorld = Object.entries(stats.wordProgress||{})
+                .filter(([idx])=>{ const i=parseInt(idx); return i>=((w.id-1)*100) && i<(w.id*100); })
+                .filter(([_,wp])=>wp.stage>=4).length;
+              return (
+                <div key={w.id} onClick={()=>unlocked && setSelectedWorld(w.id)} style={{
+                  padding:"14px 10px", borderRadius:12, textAlign:"center",
+                  background: unlocked ? `linear-gradient(135deg,${w.color},${w.bg})` : "#2a2a3a",
+                  opacity:unlocked?1:0.45, cursor:unlocked?"pointer":"not-allowed",
+                  border:isCurrent&&unlocked?`3px solid #f4a261`:"3px solid transparent",
+                  boxShadow:isCurrent&&unlocked?"0 0 16px rgba(244,162,97,0.3)":"none",
+                  transition:"all 0.2s",
+                }}>
+                  <div style={{fontSize:28,marginBottom:4}}>{unlocked?w.icon:"🔒"}</div>
+                  <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:13,color:"#fff"}}>{w.name}</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.7)",marginTop:2}}>Words {(w.id-1)*100+1}-{w.id*100}</div>
+                  {unlocked && <div style={{fontSize:10,color:"#f4a261",marginTop:4}}>📚 {wordsInWorld}/100 mastered</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Level select for selected world */}
+        {selectedWorld <= currentW && (
+          <div style={{padding:"0 16px 16px"}}>
+            <div style={{...S.sectionTitle,marginBottom:8}}>
+              {WORLDS[selectedWorld-1].icon} {WORLDS[selectedWorld-1].name} — Levels
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:12}}>
+              {[1,2,3,4,5,6,7,8,9,10].map(lv=>{
+                const unlocked = selectedWorld < currentW || (selectedWorld===currentW && lv<=currentL);
+                const lvWords = getLevelWords(selectedWorld,lv);
+                const lvMastered = lvWords.filter(w=> (stats.wordProgress?.[w.index]?.stage||0)>=4).length;
+                return (
+                  <div key={lv} onClick={()=> unlocked && setSelectedLevel(lv)}
+                    style={{
+                      padding:"8px 4px",borderRadius:8,textAlign:"center",
+                      background:unlocked? (selectedLevel===lv ? "#f4a261" : "#2d3436") : "#1a1a2e",
+                      cursor:unlocked?"pointer":"not-allowed", opacity:unlocked?1:0.35,
+                      border:selectedLevel===lv?"2px solid #f4a261":"2px solid transparent",
+                    }}>
+                    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:14,color:unlocked?"#fff":"#555"}}>{lv}</div>
+                    <div style={{fontSize:9,color:unlocked?"#aaa":"#444"}}>{lvMastered}/10</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Game mode buttons */}
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {[
+                {mode:"crystal",icon:"🔮",name:"Crystal Letters",desc:"See the word, then unscramble it!"},
+                {mode:"starfill",icon:"⭐",name:"Star Fill",desc:"Fill in the missing letters!"},
+                {mode:"keyspell",icon:"🗝️",name:"Key Spell",desc:"Listen and spell from memory!"},
+                {mode:"challenge",icon:"⚡",name:"Speed Challenge",desc:"60 seconds — spell as many as you can!"},
+              ].map(g=>(
+                <button key={g.mode} onClick={()=>startSession(selectedWorld, selectedLevel, g.mode)} style={S.gameBtn}>
+                  <span style={{fontSize:22}}>{g.icon}</span>
+                  <div style={{flex:1,textAlign:"left"}}>
+                    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:600,fontSize:14,color:"#eee"}}>{g.name}</div>
+                    <div style={{fontSize:11,color:"#888"}}>{g.desc}</div>
+                  </div>
+                  <span style={{color:"#f4a261",fontSize:16}}>▶</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── PLACEMENT TEST ────────────────────────────────────────
+  if(screen==="placement" && placementState) {
+    const ps = placementState;
+    const w = ps.words[ps.current];
+    const progress = Math.round(((ps.current)/ps.words.length)*100);
+    return (
+      <div style={S.page}>
+        
+        <div style={S.headerSm}>
+          <button onClick={()=>setScreen("home")} style={S.backBtn}>← Skip</button>
+          <div style={S.headerTitle}>🔮 Placement Test</div>
+          <div style={{width:60}}/>
+        </div>
+        <div style={{padding:"0 20px",marginBottom:12}}>
+          <div style={{height:8,background:"#1a1a2e",borderRadius:4,overflow:"hidden"}}>
+            <div style={{width:`${progress}%`,height:"100%",background:"linear-gradient(90deg,#8338ec,#3a86ff)",transition:"width 0.3s",borderRadius:4}}/>
+          </div>
+          <div style={{fontSize:11,color:"#888",textAlign:"center",marginTop:4}}>
+            {ps.current+1} / {ps.words.length} · The Magic Key is finding your power level! ✨
+          </div>
+        </div>
+
+        <div style={{...S.centerCol,padding:"20px"}}>
+          {ps.phase==="recognize" ? (
+            <>
+              <div style={{fontSize:14,color:"#aaa",marginBottom:16,fontFamily:"system-ui,-apple-system,sans-serif"}}>Do you know this word?</div>
+              <div style={{fontSize:48,fontWeight:800,color:"#f4a261",fontFamily:"system-ui,-apple-system,sans-serif",letterSpacing:4,marginBottom:24,textShadow:"0 2px 12px rgba(244,162,97,0.3)"}}>
+                {w.word}
+              </div>
+              <button onClick={()=>speakWord(w.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:20}}>🔊 Listen</button>
+              <div style={{display:"flex",gap:12}}>
+                <button onClick={()=>handlePlacementKnow(false)} style={{...S.bigBtn,background:"#636e72"}}>Not Sure</button>
+                <button onClick={()=>handlePlacementKnow(true)} style={{...S.bigBtn,background:"#27ae60"}}>I Know It! ✨</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{fontSize:14,color:"#aaa",marginBottom:8,fontFamily:"system-ui,-apple-system,sans-serif"}}>Spell it from memory!</div>
+              <button onClick={()=>speakWord(ps.spellWord.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:16}}>🔊 Listen Again</button>
+              <div style={S.buildZone}>
+                {buildLetters.length===0 ? <span style={{color:"#555",fontSize:13}}>Tap letters below...</span> :
+                  buildLetters.map((l,i)=>(
+                    <span key={i} onClick={()=>setBuildLetters(p=>p.filter((_,j)=>j!==i))} style={S.builtLetter}>{l}</span>
+                  ))
+                }
+              </div>
+              <Keyboard onCheck={handlePlacementSpell} disabled={!!feedback}/>
+              {feedback && (
+                <div style={{...S.feedbackBadge, background:feedback.correct?"#27ae6033":"#e74c3c33", borderColor:feedback.correct?"#27ae60":"#e74c3c"}}>
+                  {feedback.message}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+
+  // ── ACTIVITY SCREEN ───────────────────────────────────────
+  if((screen==="activity"||screen==="challenge") && gameState) {
+    const gs = gameState;
+    return (
+      <div style={S.page}>
+        <div style={{display:"flex",alignItems:"center",padding:"10px 14px",gap:8,borderBottom:"1px solid #2a2a3a",background:"#0f0f1a"}}>
+          <button onClick={endSession} style={S.backBtn}>⏹ End</button>
+          <div style={{flex:1}}><TimerBar sec={timer} max={screen==="challenge"?60:maxTime}/></div>
+          <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:15,color:"#f4a261",minWidth:45,textAlign:"right"}}>
+            {sessionScore.correct}/{sessionScore.total}
+          </div>
+        </div>
+
+        <div style={{textAlign:"center",padding:"6px",fontSize:12,color:"#888",fontFamily:"system-ui,-apple-system,sans-serif"}}>
+          {gs.mode==="crystal"?"🔮 Crystal Letters":gs.mode==="starfill"?"⭐ Star Fill":gs.mode==="keyspell"?"🗝️ Key Spell":gs.mode==="warmup"?"🔄 Review":gs.mode==="challenge"?"⚡ Speed Challenge":""}
+        </div>
+
+        <div style={{padding:"8px 20px",minHeight:360,position:"relative"}}>
+
+          {/* ── SENTENCE HINT (shown when missCount >= 2) ── */}
+          {gs.showHint && gs.word?.sentence && (
+            <div style={S.sentenceHint}>
+              <div style={{fontSize:11,color:"#48cae4",fontWeight:700,marginBottom:4}}>📖 Story Hint</div>
+              <div style={{fontSize:14,color:"#ddd",fontFamily:"system-ui,-apple-system,sans-serif",lineHeight:1.6}}>
+                {gs.word.sentence.split(new RegExp(`(${gs.word.word})`,"i")).map((part,i)=>
+                  part.toLowerCase()===gs.word.word.toLowerCase() ?
+                    <span key={i} style={{color:"#f4a261",fontWeight:800,textDecoration:"underline"}}>{part}</span> :
+                    <span key={i}>{part}</span>
+                )}
+              </div>
+              <button onClick={()=>speakSentence(gs.word.sentence)} style={{...S.tinyBtn,marginTop:6}}>🔊 Hear sentence</button>
+            </div>
+          )}
+
+          {/* ── WARMUP / FLASHCARD ── */}
+          {gs.mode==="warmup" && (
+            <div style={S.centerCol}>
+              <div style={{fontSize:13,color:"#aaa",marginBottom:12,fontFamily:"system-ui,-apple-system,sans-serif"}}>Do you remember this word?</div>
+              <div style={{fontSize:52,fontWeight:800,color:"#f4a261",fontFamily:"system-ui,-apple-system,sans-serif",letterSpacing:5,marginBottom:8,textShadow:"0 2px 12px rgba(244,162,97,0.3)"}}>
+                {gs.word.word}
+              </div>
+              <button onClick={()=>speakWord(gs.word.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:16}}>🔊 Listen</button>
+              {sentenceHint && (
+                <div style={{...S.sentenceHint,marginBottom:16}}>
+                  <span style={{fontSize:13,color:"#ddd"}}>{sentenceHint}</span>
+                </div>
+              )}
+              <div style={{display:"flex",gap:12}}>
+                <button onClick={()=>handleWarmupAnswer(false)} style={{...S.bigBtn,background:"#636e72"}}>Show Me 👀</button>
+                <button onClick={()=>handleWarmupAnswer(true)} style={{...S.bigBtn,background:"#27ae60"}}>I Know It! ✨</button>
+              </div>
+            </div>
+          )}
+
+          {/* ── CRYSTAL LETTERS ── */}
+          {gs.mode==="crystal" && (
+            <div style={S.centerCol}>
+              <div style={{fontSize:13,color:"#aaa",marginBottom:8,fontFamily:"system-ui,-apple-system,sans-serif"}}>
+                {gs.revealed?"Remember this word...":"Now spell it!"}
+              </div>
+              {gs.revealed ? (
+                <div style={{fontSize:48,fontWeight:800,color:"#48cae4",fontFamily:"system-ui,-apple-system,sans-serif",letterSpacing:6,marginBottom:16,
+                  textShadow:"0 0 20px rgba(72,202,228,0.4)",animation:"glow 2s ease-in-out infinite"}}>
+                  {gs.word.word}
+                </div>
+              ) : (
+                <>
+                  <button onClick={()=>speakWord(gs.word.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:12}}>🔊 Listen Again</button>
+                  <div style={S.buildZone}>
+                    {buildLetters.length===0 ? <span style={{color:"#555",fontSize:13}}>Tap the letter blocks...</span> :
+                      buildLetters.map((l,i)=>(
+                        <span key={i} onClick={()=>setBuildLetters(p=>p.filter((_,j)=>j!==i))} style={S.builtLetter}>{l}</span>
+                      ))
+                    }
+                  </div>
+                  <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:6,marginBottom:8}}>
+                    {gs.available.map((l,i)=>{
+                      const used = buildLetters.filter(b=>b===l).length;
+                      const avail = gs.available.filter(a=>a===l).length;
+                      const isUsed = used >= avail;
+                      return (
+                        <button key={i} disabled={isUsed||!!feedback}
+                          onClick={()=>!isUsed&&!feedback && setBuildLetters(p=>[...p,l])}
+                          style={{...S.crystalBlock,opacity:isUsed?0.25:1,cursor:isUsed?"default":"pointer",
+                            background:isUsed?"#1a1a2e":"linear-gradient(135deg,#7b2cbf,#5a189a)"}}>
+                          {l}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>setBuildLetters([])} style={{...S.smallBtn,background:"#636e72"}} disabled={!!feedback}>Clear</button>
+                    <button onClick={handleCrystalCheck} style={{...S.smallBtn,background:"#27ae60"}} disabled={buildLetters.length===0||!!feedback}>Check ✓</button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── STAR FILL ── */}
+          {gs.mode==="starfill" && (
+            <div style={S.centerCol}>
+              <div style={{fontSize:13,color:"#aaa",marginBottom:12,fontFamily:"system-ui,-apple-system,sans-serif"}}>Fill in the missing letter{gs.blankPositions?.length>1?"s":""}!</div>
+              <button onClick={()=>speakWord(gs.word.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:16}}>🔊 Listen</button>
+              <div style={{display:"flex",gap:6,marginBottom:24}}>
+                {gs.display?.map((c,i)=>{
+                  const blankIdx = gs.blankPositions.indexOf(i);
+                  const isFilled = blankIdx>=0 && gs.filled[blankIdx];
+                  return (
+                    <div key={i} style={{
+                      width:48,height:56,display:"flex",alignItems:"center",justifyContent:"center",
+                      borderRadius:8, fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:28,
+                      background:c==="⭐"?(isFilled?"#f4a261":"#2a2a3a"):"#1a1a2e",
+                      color:c==="⭐"?(isFilled?"#fff":"#f4a261"):"#eee",
+                      border:c==="⭐"?(blankIdx===gs.currentBlank&&!isFilled?"2px solid #f4a261":"2px solid #3a3a4a"):"2px solid #2a2a3a",
+                      transition:"all 0.2s",
+                    }}>
+                      {isFilled || (c==="⭐"?"⭐":c)}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:8,maxWidth:300}}>
+                {gs.options?.map((l,i)=>(
+                  <button key={i} onClick={()=>handleStarFill(l)} disabled={!!feedback}
+                    style={{...S.optionBtn,opacity:feedback?0.6:1}}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── KEY SPELL ── */}
+          {gs.mode==="keyspell" && (
+            <div style={S.centerCol}>
+              <div style={{fontSize:13,color:"#aaa",marginBottom:8,fontFamily:"system-ui,-apple-system,sans-serif"}}>Listen carefully, then spell!</div>
+              <div style={{fontSize:48,marginBottom:8,cursor:"pointer"}} onClick={()=>speakWord(gs.word.word)}>🔊</div>
+              <button onClick={()=>speakWord(gs.word.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:16}}>Hear Again</button>
+              <div style={S.buildZone}>
+                {buildLetters.length===0 ? <span style={{color:"#555",fontSize:13}}>Type the word...</span> :
+                  buildLetters.map((l,i)=>(
+                    <span key={i} onClick={()=>setBuildLetters(p=>p.filter((_,j)=>j!==i))} style={S.builtLetter}>{l}</span>
+                  ))
+                }
+              </div>
+              <Keyboard onCheck={handleKeySpellCheck} disabled={!!feedback}/>
+            </div>
+          )}
+
+          {/* ── CHALLENGE ── */}
+          {gs.mode==="challenge" && (
+            <div style={S.centerCol}>
+              <div style={{fontSize:13,color:"#aaa",marginBottom:8,fontFamily:"system-ui,-apple-system,sans-serif"}}>⚡ Spell fast! Word {gs.qIdx+1}/{gs.words.length}</div>
+              <div style={{fontSize:40,marginBottom:6,cursor:"pointer"}} onClick={()=>speakWord(gs.word.word)}>🔊</div>
+              <button onClick={()=>speakWord(gs.word.word)} style={{...S.tinyBtn,marginBottom:12}}>Hear Again</button>
+              <div style={S.buildZone}>
+                {buildLetters.length===0 ? <span style={{color:"#555",fontSize:13}}>Go go go!</span> :
+                  buildLetters.map((l,i)=>(
+                    <span key={i} onClick={()=>setBuildLetters(p=>p.filter((_,j)=>j!==i))} style={S.builtLetter}>{l}</span>
+                  ))
+                }
+              </div>
+              <Keyboard onCheck={handleChallengeCheck} disabled={!!feedback}/>
+            </div>
+          )}
+
+          {/* ── FEEDBACK OVERLAY ── */}
+          {feedback && (
+            <div style={{
+              position:"absolute",top:"40%",left:"50%",transform:"translate(-50%,-50%)",
+              padding:"16px 28px",borderRadius:14,textAlign:"center",zIndex:20,
+              background:feedback.correct?"rgba(39,174,96,0.15)":"rgba(231,76,60,0.15)",
+              border:`2px solid ${feedback.correct?"#27ae60":"#e74c3c"}`,
+              backdropFilter:"blur(6px)",
+            }}>
+              <div style={{fontSize:24,marginBottom:4}}>{feedback.correct?"🗝️":"💪"}</div>
+              <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:16,color:feedback.correct?"#27ae60":"#e74c3c"}}>
+                {feedback.message}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── RESULTS ───────────────────────────────────────────────
+  if(screen==="results") {
+    const acc = sessionScore.accuracy ?? (sessionScore.total>0?Math.round((sessionScore.correct/sessionScore.total)*100):0);
+    const stars = sessionScore.stars ?? (acc>=90?3:acc>=70?2:acc>=50?1:0);
+    return (
+      <div style={S.page}>
+        <div style={{margin:"28px 16px",padding:"28px 20px",background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderRadius:16,
+          border:"2px solid #2a2a4a",display:"flex",flexDirection:"column",alignItems:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
+          <div style={{fontSize:56,marginBottom:8,animation:"bounceIn 0.5s ease-out"}}>
+            {acc>=90?"🏆":acc>=70?"🗝️":acc>=50?"⭐":"💪"}
+          </div>
+          <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:24,color:"#f4a261",letterSpacing:2,textShadow:"0 2px 8px rgba(244,162,97,0.3)"}}>
+            {acc>=90?"GRAND ADVENTURE!":acc>=70?"Key Unlocked!":acc>=50?"Good Spelling!":"Keep Practising!"}
+          </div>
+          <div style={{display:"flex",gap:8,margin:"12px 0"}}>
+            {[1,2,3].map(s=>(
+              <span key={s} style={{fontSize:36,filter:s<=stars?"none":"grayscale(1) opacity(0.25)",transition:"all 0.3s",
+                animationDelay:`${s*0.2}s`,animation:s<=stars?"bounceIn 0.4s ease-out":"none"}}>⭐</span>
+            ))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,width:"100%",margin:"12px 0"}}>
+            <div style={S.resultCard}><div style={S.resultNum}>{sessionScore.correct}/{sessionScore.total}</div><div style={S.resultLabel}>Correct</div></div>
+            <div style={S.resultCard}><div style={S.resultNum}>{acc}%</div><div style={S.resultLabel}>Accuracy</div></div>
+            <div style={S.resultCard}><div style={{...S.resultNum,color:"#f4a261"}}>+{sessionScore.xp}</div><div style={S.resultLabel}>XP</div></div>
+          </div>
+          {acc<70 && (
+            <div style={{padding:"10px 14px",background:"rgba(244,162,97,0.1)",border:"1px solid rgba(244,162,97,0.3)",borderRadius:10,
+              fontSize:13,color:"#f4a261",textAlign:"center",marginTop:8,lineHeight:1.6,fontFamily:"system-ui,-apple-system,sans-serif"}}>
+              💪 Keep practising! Every word you learn is a step forward on your adventure!
+            </div>
+          )}
+          <div style={{display:"flex",gap:10,marginTop:16,width:"100%"}}>
+            <button onClick={()=>startSession(selectedWorld,selectedLevel,gameMode)} style={{...S.resultBtn,background:"#27ae60",flex:1}}>🔄 Again</button>
+            <button onClick={()=>setScreen("map")} style={{...S.resultBtn,background:"#3a86ff",flex:1}}>🗺️ Map</button>
+          </div>
+          <button onClick={()=>setScreen("home")} style={{...S.resultBtn,background:"#2a2a3a",width:"100%",marginTop:8}}>🏠 Home</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PARENT PIN ────────────────────────────────────────────
+  if(screen==="parentPin") {
+    return (
+      <div style={S.page}>
+        
+        <div style={S.headerSm}>
+          <button onClick={()=>{setScreen("home");setParentPin("");}} style={S.backBtn}>← Back</button>
+          <div style={S.headerTitle}>Parent Area</div>
+          <div style={{width:60}}/>
+        </div>
+        <div style={{margin:"40px 16px",padding:"28px",background:"#1a1a2e",borderRadius:16,border:"2px solid #2a2a4a",display:"flex",flexDirection:"column",alignItems:"center"}}>
+          <div style={{fontSize:40,marginBottom:12}}>🔐</div>
+          <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:600,marginBottom:20,color:"#ddd",fontSize:14}}>Enter PIN to view reports</div>
+          <div style={{display:"flex",gap:12,marginBottom:24}}>
+            {[0,1,2,3].map(i=>(<div key={i} style={{width:16,height:16,borderRadius:8,background:parentPin.length>i?"#f4a261":"#2a2a3a",transition:"all 0.2s"}}/>))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,width:200}}>
+            {[1,2,3,4,5,6,7,8,9,null,0,"⌫"].map((n,i)=>(
+              <button key={i} disabled={n===null} onClick={()=>{
+                if(n==="⌫") setParentPin(p=>p.slice(0,-1));
+                else if(parentPin.length<4){
+                  const np=parentPin+n;
+                  setParentPin(np);
+                  if(np.length===4){
+                    if(np==="1234"){setTimeout(()=>{setScreen("parent");setParentPin("");},300);}
+                    else{setTimeout(()=>{setShowNotice("Wrong PIN. Default: 1234");setParentPin("");setTimeout(()=>setShowNotice(null),2000);},300);}
+                  }
+                }
+              }} style={{...S.pinKey,visibility:n===null?"hidden":"visible"}}>{n}</button>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:"#555",marginTop:10}}>Default PIN: 1234</div>
+          {showNotice && <div style={{marginTop:12,padding:"8px 16px",background:"rgba(231,76,60,0.15)",borderRadius:8,color:"#e74c3c",fontSize:12,fontWeight:700}}>{showNotice}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── PARENT DASHBOARD ──────────────────────────────────────
+  if(screen==="parent") {
+    const logs = stats.sessionLog||[];
+    const last7 = logs.filter(s=>{ const d=new Date(s.date); return Date.now()-d.getTime()<7*86400000; });
+    const avgAcc = last7.length>0 ? Math.round(last7.reduce((a,s)=>a+s.accuracy,0)/last7.length) : 0;
+    const totalMins = Math.round(last7.reduce((a,s)=>a+(s.duration||0),0)/60);
+    const daysActive = new Set(last7.map(s=>s.date?.slice(0,10))).size;
+    const mastered = Object.values(stats.wordProgress||{}).filter(wp=>wp.stage>=4).length;
+
+    // Weak words (missed 2+)
+    const weakWords = Object.entries(stats.wordProgress||{})
+      .filter(([_,wp])=>wp.missCount>=2 && wp.stage<4)
+      .map(([idx,wp])=>({...getWord(parseInt(idx)),missCount:wp.missCount,stage:wp.stage}))
+      .filter(Boolean)
+      .sort((a,b)=>b.missCount-a.missCount)
+      .slice(0,20);
+
+    return (
+      <div style={S.page}>
+        
+        <div style={S.headerSm}>
+          <button onClick={()=>setScreen("home")} style={S.backBtn}>← Back</button>
+          <div style={S.headerTitle}>📊 Parent Report</div>
+          <div style={{width:60}}/>
+        </div>
+        <div style={{display:"flex",borderBottom:"1px solid #2a2a3a",padding:"0 16px"}}>
+          {["overview","words","log"].map(t=>(
+            <button key={t} onClick={()=>setParentTab(t)} style={{
+              flex:1,padding:"10px 8px",background:"none",border:"none",cursor:"pointer",
+              fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:13,textAlign:"center",
+              borderBottom:parentTab===t?"3px solid #f4a261":"3px solid transparent",
+              color:parentTab===t?"#f4a261":"#666",
+            }}>{t==="overview"?"Overview":t==="words"?"Words":"Log"}</button>
+          ))}
+        </div>
+
+        {parentTab==="overview" && (
+          <div style={{padding:16}}>
+            <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:14,color:"#f4a261",marginBottom:10}}>📈 This Week</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16}}>
+              <div style={S.parentCard}><div style={S.pNum}>{last7.length}</div><div style={S.pLabel}>Sessions</div></div>
+              <div style={S.parentCard}><div style={S.pNum}>{daysActive}/7</div><div style={S.pLabel}>Days Active</div></div>
+              <div style={S.parentCard}><div style={{...S.pNum,color:avgAcc>=70?"#27ae60":"#f39c12"}}>{avgAcc}%</div><div style={S.pLabel}>Avg Accuracy</div></div>
+              <div style={S.parentCard}><div style={S.pNum}>{totalMins}m</div><div style={S.pLabel}>Total Time</div></div>
+            </div>
+
+            <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:14,color:"#f4a261",marginBottom:10}}>🗺️ World Progress</div>
+            {WORLDS.map(w=>{
+              const wMastered = Object.entries(stats.wordProgress||{})
+                .filter(([idx])=>{const i=parseInt(idx);return i>=(w.id-1)*100&&i<w.id*100;})
+                .filter(([_,wp])=>wp.stage>=4).length;
+              return (
+                <div key={w.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid #1a1a2e",fontSize:12}}>
+                  <span>{w.icon}</span>
+                  <div style={{fontWeight:700,width:120,fontFamily:"system-ui,-apple-system,sans-serif"}}>{w.name}</div>
+                  <div style={{flex:1,height:6,background:"#1a1a2e",borderRadius:3}}>
+                    <div style={{height:"100%",borderRadius:3,width:`${wMastered}%`,background:w.color,transition:"width 0.3s"}}/>
+                  </div>
+                  <div style={{fontSize:11,color:"#aaa",width:40,textAlign:"right"}}>{wMastered}/100</div>
+                </div>
+              );
+            })}
+
+            <div style={{marginTop:16,fontSize:12,color:"#888",fontFamily:"system-ui,-apple-system,sans-serif"}}>
+              Total: {stats.totalSessions} sessions · Level {stats.level} · {mastered}/1000 words mastered · {stats.streak} day streak
+            </div>
+            <button onClick={resetAll} style={{...S.resultBtn,background:"#8B0000",marginTop:20,width:"100%"}}>🗑️ Reset All Data</button>
+          </div>
+        )}
+
+        {parentTab==="words" && (
+          <div style={{padding:16}}>
+            <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:14,color:"#e74c3c",marginBottom:10}}>
+              ⚠️ Words Needing Practice ({weakWords.length})
+            </div>
+            {weakWords.length===0 && <div style={{color:"#888",textAlign:"center",marginTop:20,fontFamily:"system-ui,-apple-system,sans-serif"}}>No weak words yet — great job!</div>}
+            <div style={{maxHeight:350,overflowY:"auto"}}>
+              {weakWords.map((w,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #1a1a2e"}}>
+                  <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:16,color:"#f4a261",width:80}}>{w.word}</div>
+                  <div style={{flex:1,fontSize:11,color:"#888",fontFamily:"system-ui,-apple-system,sans-serif"}}>{w.sentence}</div>
+                  <div style={{fontSize:11,color:"#e74c3c",fontWeight:700}}>✗{w.missCount}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:16,padding:12,background:"rgba(244,162,97,0.1)",borderRadius:10,border:"1px solid rgba(244,162,97,0.2)"}}>
+              <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:600,fontSize:13,color:"#f4a261",marginBottom:6}}>💡 Practice Tip</div>
+              <div style={{fontSize:12,color:"#aaa",lineHeight:1.7,fontFamily:"system-ui,-apple-system,sans-serif"}}>
+                These words have been missed 2+ times. Try practising them offline: write each word on a card, read the example sentence together, then have your child spell it aloud. Making it physical (writing with a finger in sand, spelling with letter magnets) helps strengthen memory.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {parentTab==="log" && (
+          <div style={{padding:16}}>
+            <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:14,color:"#f4a261",marginBottom:10}}>📋 Session Log</div>
+            {logs.length===0 && <div style={{color:"#888",textAlign:"center",marginTop:20,fontFamily:"system-ui,-apple-system,sans-serif"}}>No sessions yet</div>}
+            <div style={{maxHeight:400,overflowY:"auto"}}>
+              {[...logs].reverse().map((s,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #1a1a2e"}}>
+                  <div style={{fontSize:10,color:"#555",width:60,fontWeight:700,fontFamily:"system-ui,-apple-system,sans-serif"}}>
+                    {new Date(s.date).toLocaleDateString("en-GB",{month:"short",day:"numeric"})}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:12,fontFamily:"system-ui,-apple-system,sans-serif"}}>{WORLDS[s.world-1]?.icon} {WORLDS[s.world-1]?.name}</div>
+                    <div style={{fontSize:10,color:"#888",fontFamily:"system-ui,-apple-system,sans-serif"}}>{s.correct}/{s.total} correct · {Math.round((s.duration||0)/60)}min · +{s.xp}XP</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{color:s.accuracy>=80?"#27ae60":s.accuracy>=60?"#f39c12":"#e74c3c",fontWeight:800,fontSize:13}}>{s.accuracy}%</div>
+                    <div style={{fontSize:11}}>{"⭐".repeat(s.stars||0)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return <div style={S.page}><div style={S.center}><div style={S.loadText}>Loading...</div></div></div>;
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// STYLES
+// ══════════════════════════════════════════════════════════════
+const S = {
+  page: {
+    minHeight:"100vh",background:"linear-gradient(180deg,#0f0f1a 0%,#16213e 100%)",
+    color:"#eee",fontFamily:"system-ui,sans-serif",maxWidth:480,margin:"0 auto",paddingBottom:24,
+  },
+  center: {
+    minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+    background:"#0f0f1a",color:"#f4a261",fontFamily:"sans-serif",
+  },
+  centerCol: { display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 0" },
+  loadText: { fontWeight:700,letterSpacing:2,fontSize:14 },
+
+  // Header
+  header: {
+    display:"flex",justifyContent:"space-between",alignItems:"center",
+    padding:"16px 20px 10px",borderBottom:"1px solid #2a2a3a",
+  },
+  logoArea: { display:"flex",alignItems:"center",gap:10 },
+  logoTitle: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:22,color:"#f4a261",letterSpacing:3,textShadow:"0 2px 8px rgba(244,162,97,0.3)" },
+  logoSub: { fontFamily:"system-ui,-apple-system,sans-serif",fontSize:11,color:"#7b8794",letterSpacing:4,fontWeight:600 },
+  iconBtn: {
+    background:"none",border:"1px solid #2a2a3a",borderRadius:10,padding:"6px 10px",fontSize:20,cursor:"pointer",color:"#888",
+  },
+
+  // Stats bar
+  statsBar: { display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,padding:"12px 16px" },
+  statChip: {
+    display:"flex",alignItems:"center",gap:6,background:"#1a1a2e",borderRadius:10,padding:"8px 6px",
+    border:"1px solid #2a2a3a",
+  },
+  statNum: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:15,color:"#eee" },
+  statLabel: { fontSize:9,color:"#7b8794",fontFamily:"system-ui,-apple-system,sans-serif" },
+
+  // Main button
+  mainBtn: {
+    display:"flex",alignItems:"center",gap:12,margin:"8px 16px",padding:"16px 20px",
+    background:"linear-gradient(135deg,#2d6a4f,#1b4332)",border:"none",
+    borderRadius:14,cursor:"pointer",color:"#fff",width:"calc(100% - 32px)",
+    boxShadow:"0 4px 16px rgba(0,0,0,0.3)",transition:"transform 0.15s",
+    fontFamily:"system-ui,-apple-system,sans-serif",
+  },
+  mainBtnTitle: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:17,textAlign:"left" },
+  mainBtnSub: { fontSize:11,color:"rgba(255,255,255,0.6)",textAlign:"left",marginTop:2 },
+
+  // Notice
+  noticeGreen: {
+    margin:"8px 16px",padding:"10px 14px",background:"rgba(39,174,96,0.1)",border:"1px solid #27ae60",
+    borderRadius:10,fontSize:13,color:"#27ae60",textAlign:"center",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:600,
+  },
+
+  // Recent
+  recentBox: { margin:"12px 16px",padding:"12px 14px",background:"#1a1a2e",borderRadius:10,border:"1px solid #2a2a3a" },
+  sectionTitle: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:13,color:"#f4a261",marginBottom:8,letterSpacing:1 },
+  recentRow: {
+    display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid #16213e",fontFamily:"system-ui,-apple-system,sans-serif",
+  },
+
+  // Header small
+  headerSm: {
+    display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",
+    borderBottom:"1px solid #2a2a3a",background:"#0f0f1a",
+  },
+  headerTitle: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:15,color:"#f4a261",letterSpacing:1 },
+  backBtn: {
+    background:"none",border:"1px solid #2a2a3a",borderRadius:8,padding:"6px 12px",
+    color:"#aaa",cursor:"pointer",fontFamily:"system-ui,-apple-system,sans-serif",fontSize:12,fontWeight:700,
+  },
+
+  // Game button
+  gameBtn: {
+    display:"flex",alignItems:"center",gap:10,width:"100%",padding:"12px 14px",
+    background:"#1a1a2e",border:"1px solid #2a2a3a",borderRadius:10,cursor:"pointer",
+    color:"#eee",transition:"all 0.15s",fontFamily:"system-ui,-apple-system,sans-serif",
+  },
+
+  // Build zone
+  buildZone: {
+    display:"flex",flexWrap:"wrap",justifyContent:"center",alignItems:"center",gap:4,
+    minHeight:52,padding:"8px 14px",background:"#1a1a2e",borderRadius:10,
+    border:"2px dashed #2a2a3a",marginBottom:12,width:"100%",maxWidth:360,
+  },
+  builtLetter: {
+    width:36,height:42,display:"inline-flex",alignItems:"center",justifyContent:"center",
+    background:"linear-gradient(135deg,#48cae4,#0096c7)",borderRadius:8,
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#fff",cursor:"pointer",
+    boxShadow:"0 2px 6px rgba(72,202,228,0.3)",transition:"all 0.1s",
+  },
+
+  // Crystal block
+  crystalBlock: {
+    width:44,height:50,display:"flex",alignItems:"center",justifyContent:"center",
+    borderRadius:8,fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#fff",
+    border:"none",boxShadow:"0 3px 0 rgba(0,0,0,0.3),0 2px 8px rgba(123,44,191,0.2)",
+    transition:"all 0.15s",
+  },
+
+  // Option button
+  optionBtn: {
+    width:48,height:52,display:"flex",alignItems:"center",justifyContent:"center",
+    background:"#2a2a3a",borderRadius:10,border:"2px solid #3a3a4a",cursor:"pointer",
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#eee",transition:"all 0.15s",
+  },
+
+  // Sentence hint
+  sentenceHint: {
+    padding:"10px 14px",background:"rgba(72,202,228,0.08)",border:"1px solid rgba(72,202,228,0.2)",
+    borderRadius:10,marginBottom:12,textAlign:"center",width:"100%",maxWidth:360,
+  },
+
+  // Keyboard
+  kbKey: {
+    width:32,height:40,borderRadius:6,border:"none",background:"#2a2a3a",
+    color:"#eee",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:16,cursor:"pointer",
+    boxShadow:"0 2px 0 #1a1a2e",transition:"all 0.1s",display:"flex",alignItems:"center",justifyContent:"center",
+  },
+
+  // Buttons
+  smallBtn: {
+    padding:"8px 18px",borderRadius:8,border:"none",color:"#fff",fontFamily:"system-ui,-apple-system,sans-serif",
+    fontWeight:700,fontSize:13,cursor:"pointer",boxShadow:"0 2px 0 rgba(0,0,0,0.2)",
+  },
+  tinyBtn: {
+    padding:"5px 12px",borderRadius:6,border:"none",color:"#fff",background:"#3a86ff",
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:11,cursor:"pointer",
+  },
+  bigBtn: {
+    padding:"14px 24px",borderRadius:12,border:"none",color:"#fff",fontFamily:"system-ui,-apple-system,sans-serif",
+    fontWeight:700,fontSize:16,cursor:"pointer",boxShadow:"0 3px 0 rgba(0,0,0,0.2)",
+    transition:"transform 0.1s",
+  },
+
+  // Results
+  resultCard: { textAlign:"center",padding:"10px",background:"#0f0f1a",borderRadius:10,border:"1px solid #2a2a3a" },
+  resultNum: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:22,color:"#eee" },
+  resultLabel: { fontSize:10,color:"#7b8794",marginTop:3,fontFamily:"system-ui,-apple-system,sans-serif" },
+  resultBtn: {
+    padding:"12px",borderRadius:10,border:"none",color:"#fff",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,
+    cursor:"pointer",fontSize:14,boxShadow:"0 2px 0 rgba(0,0,0,0.2)",
+  },
+
+  // PIN
+  pinKey: {
+    width:56,height:48,borderRadius:10,border:"1px solid #2a2a3a",background:"#0f0f1a",
+    color:"#eee",fontSize:20,fontWeight:700,cursor:"pointer",fontFamily:"system-ui,-apple-system,sans-serif",
+    display:"flex",alignItems:"center",justifyContent:"center",
+  },
+
+  // Parent
+  parentCard: {
+    background:"#0f0f1a",borderRadius:10,padding:"14px",textAlign:"center",border:"1px solid #2a2a3a",
+  },
+  pNum: { fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:22,color:"#eee" },
+  pLabel: { fontSize:10,color:"#7b8794",marginTop:3,fontFamily:"system-ui,-apple-system,sans-serif" },
+
+  // Toast
+  toast: {
+    position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",padding:"10px 20px",
+    background:"rgba(39,174,96,0.9)",borderRadius:10,color:"#fff",fontFamily:"system-ui,-apple-system,sans-serif",
+    fontWeight:600,fontSize:13,zIndex:100,boxShadow:"0 4px 16px rgba(0,0,0,0.3)",
+    maxWidth:340,textAlign:"center",
+  },
+
+  feedbackBadge: {
+    marginTop:12,padding:"10px 20px",borderRadius:10,border:"2px solid",
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:15,textAlign:"center",
+  },
+};
+
+// ── Render ──────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(MagicKeySpeller));
+
+// ── Register Service Worker ─────────────────────────────────
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
