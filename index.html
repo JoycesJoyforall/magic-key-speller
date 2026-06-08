@@ -227,15 +227,51 @@ const getLevelWords = (worldId, levelNum) => {
 };
 
 // Speak word using Web Speech API
-const speakWord = (word, rate=0.85) => {
+let friendlyVoice = null;
+const getFriendlyVoice = () => {
+  if(!window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if(friendlyVoice && voices.includes(friendlyVoice)) return friendlyVoice;
+  friendlyVoice =
+    voices.find(v => /^en-US/i.test(v.lang) && /Jenny|Aria|Samantha|Zira|Google US English|Natural/i.test(v.name)) ||
+    voices.find(v => /^en-GB/i.test(v.lang) && /Daniel|Serena|Kate|Google UK English|Natural/i.test(v.name)) ||
+    voices.find(v => /^en-US/i.test(v.lang)) ||
+    voices.find(v => /^en-GB/i.test(v.lang)) ||
+    voices.find(v => /^en/i.test(v.lang)) ||
+    null;
+  return friendlyVoice;
+};
+if(typeof window !== "undefined" && window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = getFriendlyVoice;
+}
+const makeUtterance = (text, rate=0.74, pitch=1.04) => {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang="en-US"; u.rate=rate; u.pitch=pitch; u.volume=1;
+  const voice = getFriendlyVoice();
+  if(voice) u.voice = voice;
+  return u;
+};
+const speakWord = (word, rate=0.74) => {
   if(!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(word);
-  u.lang="en-US"; u.rate=rate; u.pitch=1.0;
+  window.speechSynthesis.resume?.();
+  const u = makeUtterance(word, rate, 1.04);
+  window.speechSynthesis.speak(u);
+};
+const speakFeedback = (isCorrect, word=null) => {
+  if(!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.resume?.();
+  const u = makeUtterance(isCorrect ? "Great job!" : "Keep trying.", isCorrect ? 0.78 : 0.72, isCorrect ? 1.12 : 1.02);
+  if(!isCorrect && word) {
+    u.onend = () => {
+      window.speechSynthesis.speak(makeUtterance(`The word is ${word}.`, 0.68, 1.02));
+    };
+  }
   window.speechSynthesis.speak(u);
 };
 
-const speakSentence = (s) => speakWord(s, 0.8);
+const speakSentence = (s) => speakWord(s, 0.72);
 
 // ══════════════════════════════════════════════════════════════
 // MAIN APP COMPONENT
@@ -256,6 +292,7 @@ function MagicKeySpeller() {
   const [buildLetters, setBuildLetters] = useState([]);
   const [sentenceHint, setSentenceHint] = useState(null);
   const [selectedLevel, setSelectedLevel] = useState(1);
+  const [selectedStarBlank, setSelectedStarBlank] = useState(null);
   const timerRef = useRef(null);
   const maxTime = 10 * 60; // 10 minutes
 
@@ -368,6 +405,7 @@ function MagicKeySpeller() {
     const newKnown = isCorrect ? [...ps.known, ps.spellWord.globalIdx] : ps.known;
 
     setFeedback({correct:isCorrect, message:isCorrect?"✨ Great!":"Not quite!"});
+    speakFeedback(isCorrect, correct);
     setTimeout(()=>{
       setFeedback(null);
       setBuildLetters([]);
@@ -436,6 +474,7 @@ function MagicKeySpeller() {
     const w = words[qIdx];
     const wp = getWP(w.index);
     const showHint = wp.missCount >= 2;
+    setSelectedStarBlank(null);
 
     if(mode==="warmup") {
       setGameState({ mode, words, qIdx, word:w, showHint, type:"flashcard" });
@@ -466,7 +505,8 @@ function MagicKeySpeller() {
       const alphabet = "abcdefghijklmnopqrstuvwxyz";
       const distractors = shuffle(alphabet.split("").filter(c=>!blankedLetters.includes(c))).slice(0,4);
       const options = shuffle([...blankedLetters,...distractors]);
-      setGameState({ mode, words, qIdx, word:w, showHint, display, blankPositions, blankedLetters, options, filled:new Array(numBlanks).fill(null), currentBlank:0 });
+      setGameState({ mode, words, qIdx, word:w, showHint, display, blankPositions, blankedLetters, options, filled:new Array(numBlanks).fill(null) });
+      setSelectedStarBlank(0);
       speakWord(w.word);
     } else if(mode==="keyspell") {
       setGameState({ mode, words, qIdx, word:w, showHint });
@@ -496,7 +536,7 @@ function MagicKeySpeller() {
     const newProgress = {...stats.wordProgress, [gameState.word.index]:newWP};
 
     setFeedback({correct:isCorrect, message:isCorrect?"✨ Brilliant Spell!": `The word is: ${correct}`});
-    if(isCorrect) speakWord(correct);
+    speakFeedback(isCorrect, correct);
     setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
     setStats(prev=>({...prev, wordProgress:newProgress}));
 
@@ -507,26 +547,62 @@ function MagicKeySpeller() {
     }, isCorrect?1200:2500);
   };
 
-  // Star Fill: select letter for blank
+  const moveStarLetter = (fromIdx, toIdx) => {
+    if(!gameState||feedback) return;
+    const gs = gameState;
+    if(gs.mode!=="starfill" || fromIdx===toIdx) return;
+    const newFilled = [...gs.filled];
+    const moving = newFilled[fromIdx];
+    newFilled[fromIdx] = newFilled[toIdx];
+    newFilled[toIdx] = moving;
+    setSelectedStarBlank(toIdx);
+    setGameState({...gs, filled:newFilled});
+  };
+
+  // Star Fill: select any star, place letters, move letters, then check.
   const handleStarFill = (letter) => {
     if(!gameState||feedback) return;
     const gs = gameState;
+    const targetBlank = selectedStarBlank ?? gs.filled.findIndex(v=>!v);
+    const blankIdx = targetBlank >= 0 ? targetBlank : 0;
     const newFilled = [...gs.filled];
-    newFilled[gs.currentBlank] = letter;
+    newFilled[blankIdx] = letter;
+    const nextBlank = newFilled.findIndex(v=>!v);
+    setSelectedStarBlank(nextBlank >= 0 ? nextBlank : blankIdx);
+    setGameState({...gs, filled:newFilled});
+  };
 
-    if(gs.currentBlank+1 < gs.blankPositions.length) {
-      setGameState({...gs, filled:newFilled, currentBlank:gs.currentBlank+1});
+  const handleStarSlotClick = (blankIdx) => {
+    if(!gameState||feedback) return;
+    setSelectedStarBlank(blankIdx);
+  };
+
+  const handleStarClear = (blankIdx) => {
+    if(!gameState||feedback) return;
+    const gs = gameState;
+    const newFilled = [...gs.filled];
+    newFilled[blankIdx] = null;
+    setSelectedStarBlank(blankIdx);
+    setGameState({...gs, filled:newFilled});
+  };
+
+  const handleStarFillCheck = () => {
+    if(!gameState||feedback) return;
+    const gs = gameState;
+    if(gs.filled.some(v=>!v)) {
+      setShowNotice("Fill every star, then press Check.");
+      setTimeout(()=>setShowNotice(null), 1800);
       return;
     }
 
     // All blanks filled, check
-    const isCorrect = newFilled.every((l,i)=> l===gs.blankedLetters[i]);
+    const isCorrect = gs.filled.every((l,i)=> l===gs.blankedLetters[i]);
     const xp = isCorrect?15:2;
     const newWP = updateWordProgress(gs.word.index, isCorrect);
     const newProgress = {...stats.wordProgress, [gs.word.index]:newWP};
 
     setFeedback({correct:isCorrect, message:isCorrect?"⭐ Star Filled!": `The word is: ${gs.word.word}`});
-    if(isCorrect) speakWord(gs.word.word);
+    speakFeedback(isCorrect, gs.word.word);
     setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
     setStats(prev=>({...prev, wordProgress:newProgress}));
 
@@ -548,7 +624,7 @@ function MagicKeySpeller() {
     const newProgress = {...stats.wordProgress, [gameState.word.index]:newWP};
 
     setFeedback({correct:isCorrect, message:isCorrect?"🗝️ Key Unlocked!": `The word is: ${correct}`});
-    if(isCorrect) speakWord(correct);
+    speakFeedback(isCorrect, correct);
     setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
     setStats(prev=>({...prev, wordProgress:newProgress}));
 
@@ -587,6 +663,7 @@ function MagicKeySpeller() {
     const xp = isCorrect?10:0;
 
     setFeedback({correct:isCorrect, message:isCorrect?"⚡ Fast!": correct});
+    speakFeedback(isCorrect, correct);
     setSessionScore(p=>({correct:p.correct+(isCorrect?1:0), total:p.total+1, xp:p.xp+xp}));
 
     setTimeout(()=>{
@@ -639,10 +716,10 @@ function MagicKeySpeller() {
   const Keyboard = ({onCheck, disabled}) => {
     const rows = [["q","w","e","r","t","y","u","i","o","p"],["a","s","d","f","g","h","j","k","l"],["z","x","c","v","b","n","m"]];
     return (
-      <div style={{width:"100%",maxWidth:400,margin:"0 auto"}}>
+      <div style={S.keyboardPanel}>
         {rows.map((row,ri) => (
-          <div key={ri} style={{display:"flex",justifyContent:"center",gap:3,marginBottom:3}}>
-            {ri===2 && <div style={{width:16}}/>}
+          <div key={ri} style={S.keyboardRow}>
+            {ri===2 && <div style={S.keyboardSpacer}/>}
             {row.map(k=>(
               <button key={k} disabled={disabled}
                 onClick={()=>!disabled && setBuildLetters(p=>[...p,k])}
@@ -651,15 +728,15 @@ function MagicKeySpeller() {
               </button>
             ))}
             {ri===2 && (
-              <button onClick={()=>setBuildLetters(p=>p.slice(0,-1))} style={{...S.kbKey,width:40,background:"#c0392b",fontSize:14}}>
+              <button onClick={()=>setBuildLetters(p=>p.slice(0,-1))} style={{...S.kbKey,...S.kbBackspace}}>
                 ⌫
               </button>
             )}
           </div>
         ))}
-        <div style={{display:"flex",gap:6,justifyContent:"center",marginTop:6}}>
-          <button onClick={()=>setBuildLetters([])} style={{...S.smallBtn,background:"#7f8c8d"}} disabled={disabled}>Clear</button>
-          <button onClick={onCheck} style={{...S.smallBtn,background:"#27ae60"}} disabled={disabled||buildLetters.length===0}>Check ✓</button>
+        <div style={S.keyboardActions}>
+          <button onClick={()=>setBuildLetters([])} style={{...S.smallBtn,...S.actionBtn,background:"#59636a"}} disabled={disabled}>Clear</button>
+          <button onClick={onCheck} style={{...S.smallBtn,...S.actionBtn,background:"#1f8a4c"}} disabled={disabled||buildLetters.length===0}>Check ✓</button>
         </div>
       </div>
     );
@@ -887,21 +964,9 @@ function MagicKeySpeller() {
     return (
       <div style={S.page}>
         
-        <div style={S.headerSm}>
-          <button onClick={()=>setScreen("home")} style={S.backBtn}>← Skip</button>
-          <div style={S.headerTitle}>🔮 Placement Test</div>
-          <div style={{width:60}}/>
-        </div>
-        <div style={{padding:"0 20px",marginBottom:12}}>
-          <div style={{height:8,background:"#1a1a2e",borderRadius:4,overflow:"hidden"}}>
-            <div style={{width:`${progress}%`,height:"100%",background:"linear-gradient(90deg,#8338ec,#3a86ff)",transition:"width 0.3s",borderRadius:4}}/>
-          </div>
-          <div style={{fontSize:11,color:"#888",textAlign:"center",marginTop:4}}>
-            {ps.current+1} / {ps.words.length} · The Magic Key is finding your power level! ✨
-          </div>
-        </div>
+        <div style={S.activityTop}>🔮 Placement Test</div>
 
-        <div style={{...S.centerCol,padding:"20px"}}>
+        <div style={{...S.centerCol,padding:"20px 20px 128px"}}>
           {ps.phase==="recognize" ? (
             <>
               <div style={{fontSize:14,color:"#aaa",marginBottom:16,fontFamily:"system-ui,-apple-system,sans-serif"}}>Do you know this word?</div>
@@ -934,6 +999,17 @@ function MagicKeySpeller() {
             </>
           )}
         </div>
+        <div style={S.bottomGameBar}>
+          <button onClick={()=>setScreen("home")} style={S.endBtn}>Skip</button>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{height:14,background:"#172536",borderRadius:8,overflow:"hidden",border:"1px solid #344256"}}>
+              <div style={{width:`${progress}%`,height:"100%",background:"linear-gradient(90deg,#8338ec,#3a86ff)",transition:"width 0.3s",borderRadius:8}}/>
+            </div>
+            <div style={{fontSize:15,color:"#d1dce8",textAlign:"center",marginTop:5,fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800}}>
+              {ps.current+1} / {ps.words.length} · Magic Key is finding your level
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -944,19 +1020,11 @@ function MagicKeySpeller() {
     const gs = gameState;
     return (
       <div style={S.page}>
-        <div style={{display:"flex",alignItems:"center",padding:"10px 14px",gap:8,borderBottom:"1px solid #2a2a3a",background:"#0f0f1a"}}>
-          <button onClick={endSession} style={S.backBtn}>⏹ End</button>
-          <div style={{flex:1}}><TimerBar sec={timer} max={screen==="challenge"?60:maxTime}/></div>
-          <div style={{fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:15,color:"#f4a261",minWidth:45,textAlign:"right"}}>
-            {sessionScore.correct}/{sessionScore.total}
-          </div>
-        </div>
-
-        <div style={{textAlign:"center",padding:"6px",fontSize:12,color:"#888",fontFamily:"system-ui,-apple-system,sans-serif"}}>
+        <div style={S.activityTop}>
           {gs.mode==="crystal"?"🔮 Crystal Letters":gs.mode==="starfill"?"⭐ Star Fill":gs.mode==="keyspell"?"🗝️ Key Spell":gs.mode==="warmup"?"🔄 Review":gs.mode==="challenge"?"⚡ Speed Challenge":""}
         </div>
 
-        <div style={{padding:"8px 20px",minHeight:360,position:"relative"}}>
+        <div style={S.activityBody}>
 
           {/* ── SENTENCE HINT (shown when missCount >= 2) ── */}
           {gs.showHint && gs.word?.sentence && (
@@ -1041,33 +1109,46 @@ function MagicKeySpeller() {
           {/* ── STAR FILL ── */}
           {gs.mode==="starfill" && (
             <div style={S.centerCol}>
-              <div style={{fontSize:13,color:"#aaa",marginBottom:12,fontFamily:"system-ui,-apple-system,sans-serif"}}>Fill in the missing letter{gs.blankPositions?.length>1?"s":""}!</div>
-              <button onClick={()=>speakWord(gs.word.word)} style={{...S.smallBtn,background:"#3a86ff",marginBottom:16}}>🔊 Listen</button>
-              <div style={{display:"flex",gap:6,marginBottom:24}}>
+              <div style={S.largePrompt}>Tap a star, then choose a letter.</div>
+              <button onClick={()=>speakWord(gs.word.word)} style={{...S.smallBtn,...S.listenBtn}}>🔊 Listen Again</button>
+              <div style={S.starWordRow}>
                 {gs.display?.map((c,i)=>{
                   const blankIdx = gs.blankPositions.indexOf(i);
                   const isFilled = blankIdx>=0 && gs.filled[blankIdx];
+                  const isBlank = blankIdx >= 0;
+                  const isActive = isBlank && selectedStarBlank === blankIdx && !feedback;
                   return (
-                    <div key={i} style={{
-                      width:48,height:56,display:"flex",alignItems:"center",justifyContent:"center",
-                      borderRadius:8, fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:28,
-                      background:c==="⭐"?(isFilled?"#f4a261":"#2a2a3a"):"#1a1a2e",
-                      color:c==="⭐"?(isFilled?"#fff":"#f4a261"):"#eee",
-                      border:c==="⭐"?(blankIdx===gs.currentBlank&&!isFilled?"2px solid #f4a261":"2px solid #3a3a4a"):"2px solid #2a2a3a",
-                      transition:"all 0.2s",
-                    }}>
-                      {isFilled || (c==="⭐"?"⭐":c)}
-                    </div>
+                    <button key={i} type="button"
+                      onClick={()=>isBlank && handleStarSlotClick(blankIdx)}
+                      onDoubleClick={()=>isBlank && handleStarClear(blankIdx)}
+                      draggable={!!isFilled && !feedback}
+                      onDragStart={e=>{ if(isFilled) e.dataTransfer.setData("text/plain", String(blankIdx)); }}
+                      onDragOver={e=>isBlank && e.preventDefault()}
+                      onDrop={e=>{ if(isBlank){ e.preventDefault(); moveStarLetter(Number(e.dataTransfer.getData("text/plain")), blankIdx); } }}
+                      style={{
+                        ...S.starSlot,
+                        background:isBlank?(isFilled?"#f0a84b":isActive?"#3b3448":"#232536"):"#151a24",
+                        color:isBlank?(isFilled?"#10222a":"#f0a84b"):"#f4f7fb",
+                        border:isBlank?(isActive?"4px solid #ffd166":"3px solid #48515f"):"3px solid #2f3744",
+                        boxShadow:isActive?"0 0 0 5px rgba(255,209,102,0.18), 0 8px 18px rgba(0,0,0,0.28)":"0 5px 12px rgba(0,0,0,0.2)",
+                      }}>
+                      {isFilled || (isBlank?"⭐":c)}
+                    </button>
                   );
                 })}
               </div>
-              <div style={{display:"flex",flexWrap:"wrap",justifyContent:"center",gap:8,maxWidth:300}}>
+              <div style={S.starHelp}>Drag filled letters to swap. Double tap a filled star to clear.</div>
+              <div style={S.starOptions}>
                 {gs.options?.map((l,i)=>(
                   <button key={i} onClick={()=>handleStarFill(l)} disabled={!!feedback}
                     style={{...S.optionBtn,opacity:feedback?0.6:1}}>
                     {l}
                   </button>
                 ))}
+              </div>
+              <div style={S.starActions}>
+                <button onClick={()=>{setSelectedStarBlank(0);setGameState({...gs, filled:new Array(gs.blankPositions.length).fill(null)})}} style={{...S.smallBtn,...S.actionBtn,background:"#59636a"}} disabled={!!feedback}>Clear</button>
+                <button onClick={handleStarFillCheck} style={{...S.smallBtn,...S.actionBtn,background:"#1f8a4c"}} disabled={!!feedback}>Check ✓</button>
               </div>
             </div>
           )}
@@ -1121,6 +1202,11 @@ function MagicKeySpeller() {
               </div>
             </div>
           )}
+        </div>
+        <div style={S.bottomGameBar}>
+          <button onClick={endSession} style={S.endBtn}>⏹ End</button>
+          <div style={{flex:1,minWidth:0}}><TimerBar sec={timer} max={screen==="challenge"?60:maxTime}/></div>
+          <div style={S.bottomScore}>{sessionScore.correct}/{sessionScore.total}</div>
         </div>
       </div>
     );
@@ -1335,14 +1421,14 @@ function MagicKeySpeller() {
 // ══════════════════════════════════════════════════════════════
 const S = {
   page: {
-    minHeight:"100vh",background:"linear-gradient(180deg,#0f0f1a 0%,#16213e 100%)",
-    color:"#eee",fontFamily:"system-ui,sans-serif",maxWidth:480,margin:"0 auto",paddingBottom:24,
+    minHeight:"100vh",background:"linear-gradient(180deg,#101820 0%,#172536 100%)",
+    color:"#f4f7fb",fontFamily:"system-ui,sans-serif",maxWidth:820,margin:"0 auto",paddingBottom:24,
   },
   center: {
     minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
     background:"#0f0f1a",color:"#f4a261",fontFamily:"sans-serif",
   },
-  centerCol: { display:"flex",flexDirection:"column",alignItems:"center",padding:"8px 0" },
+  centerCol: { display:"flex",flexDirection:"column",alignItems:"center",padding:"10px 0",width:"100%" },
   loadText: { fontWeight:700,letterSpacing:2,fontSize:14 },
 
   // Header
@@ -1400,6 +1486,28 @@ const S = {
     background:"none",border:"1px solid #2a2a3a",borderRadius:8,padding:"6px 12px",
     color:"#aaa",cursor:"pointer",fontFamily:"system-ui,-apple-system,sans-serif",fontSize:12,fontWeight:700,
   },
+  activityTop: {
+    textAlign:"center",padding:"14px 16px 10px",fontSize:18,color:"#ffd166",
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,letterSpacing:0.5,borderBottom:"1px solid #2b3544",
+    background:"#101820",
+  },
+  activityBody: {
+    padding:"16px 24px 128px",minHeight:520,position:"relative",
+  },
+  bottomGameBar: {
+    position:"sticky",bottom:0,zIndex:30,display:"flex",alignItems:"center",gap:12,
+    padding:"14px 18px calc(14px + env(safe-area-inset-bottom,0px))",
+    background:"rgba(16,24,32,0.96)",borderTop:"2px solid #344256",boxShadow:"0 -8px 24px rgba(0,0,0,0.28)",
+    backdropFilter:"blur(8px)",
+  },
+  endBtn: {
+    minWidth:100,minHeight:52,borderRadius:14,border:"2px solid #7f3640",
+    background:"#3b1f27",color:"#ffd9df",cursor:"pointer",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:18,
+  },
+  bottomScore: {
+    minWidth:76,textAlign:"center",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#ffd166",
+    background:"#172536",border:"2px solid #344256",borderRadius:14,padding:"10px 8px",
+  },
 
   // Game button
   gameBtn: {
@@ -1410,31 +1518,44 @@ const S = {
 
   // Build zone
   buildZone: {
-    display:"flex",flexWrap:"wrap",justifyContent:"center",alignItems:"center",gap:4,
-    minHeight:52,padding:"8px 14px",background:"#1a1a2e",borderRadius:10,
-    border:"2px dashed #2a2a3a",marginBottom:12,width:"100%",maxWidth:360,
+    display:"flex",flexWrap:"wrap",justifyContent:"center",alignItems:"center",gap:8,
+    minHeight:76,padding:"12px 16px",background:"#151e2b",borderRadius:14,
+    border:"3px dashed #405064",marginBottom:16,width:"100%",maxWidth:620,
   },
   builtLetter: {
-    width:36,height:42,display:"inline-flex",alignItems:"center",justifyContent:"center",
+    minWidth:52,height:60,display:"inline-flex",alignItems:"center",justifyContent:"center",
     background:"linear-gradient(135deg,#48cae4,#0096c7)",borderRadius:8,
-    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#fff",cursor:"pointer",
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:30,color:"#fff",cursor:"pointer",
     boxShadow:"0 2px 6px rgba(72,202,228,0.3)",transition:"all 0.1s",
+    padding:"0 10px",
   },
 
   // Crystal block
   crystalBlock: {
-    width:44,height:50,display:"flex",alignItems:"center",justifyContent:"center",
-    borderRadius:8,fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#fff",
+    minWidth:58,height:64,display:"flex",alignItems:"center",justifyContent:"center",
+    borderRadius:12,fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:30,color:"#fff",
     border:"none",boxShadow:"0 3px 0 rgba(0,0,0,0.3),0 2px 8px rgba(123,44,191,0.2)",
-    transition:"all 0.15s",
+    transition:"all 0.15s",padding:"0 12px",
   },
 
   // Option button
   optionBtn: {
-    width:48,height:52,display:"flex",alignItems:"center",justifyContent:"center",
-    background:"#2a2a3a",borderRadius:10,border:"2px solid #3a3a4a",cursor:"pointer",
-    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,color:"#eee",transition:"all 0.15s",
+    minWidth:66,height:70,display:"flex",alignItems:"center",justifyContent:"center",
+    background:"#263241",borderRadius:14,border:"3px solid #4b5d72",cursor:"pointer",
+    fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:32,color:"#f4f7fb",transition:"all 0.15s",
+    padding:"0 14px",
   },
+  largePrompt: { fontSize:20,color:"#f4f7fb",marginBottom:14,fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,textAlign:"center" },
+  listenBtn: { background:"#276fbf",marginBottom:18,minHeight:50,fontSize:18,padding:"12px 24px" },
+  starWordRow: { display:"flex",flexWrap:"wrap",justifyContent:"center",gap:10,marginBottom:14,maxWidth:720 },
+  starSlot: {
+    minWidth:64,height:72,display:"flex",alignItems:"center",justifyContent:"center",
+    borderRadius:16,fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:900,fontSize:34,cursor:"pointer",
+    transition:"all 0.16s",padding:"0 12px",
+  },
+  starHelp: { fontSize:15,color:"#b8c7d9",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,textAlign:"center",margin:"0 0 16px" },
+  starOptions: { display:"flex",flexWrap:"wrap",justifyContent:"center",gap:12,maxWidth:520 },
+  starActions: { display:"flex",gap:12,justifyContent:"center",marginTop:18,width:"100%",maxWidth:420 },
 
   // Sentence hint
   sentenceHint: {
@@ -1444,16 +1565,22 @@ const S = {
 
   // Keyboard
   kbKey: {
-    width:32,height:40,borderRadius:6,border:"none",background:"#2a2a3a",
-    color:"#eee",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:16,cursor:"pointer",
-    boxShadow:"0 2px 0 #1a1a2e",transition:"all 0.1s",display:"flex",alignItems:"center",justifyContent:"center",
+    width:"9.2%",maxWidth:64,minWidth:34,height:58,borderRadius:12,border:"2px solid #47586b",background:"#263241",
+    color:"#f4f7fb",fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:800,fontSize:22,cursor:"pointer",
+    boxShadow:"0 4px 0 #121a24",transition:"all 0.1s",display:"flex",alignItems:"center",justifyContent:"center",
   },
+  keyboardPanel: { width:"100%",maxWidth:760,margin:"0 auto",padding:"8px 6px 0" },
+  keyboardRow: { display:"flex",justifyContent:"center",gap:6,marginBottom:8 },
+  keyboardSpacer: { width:"4%" },
+  keyboardActions: { display:"flex",gap:12,justifyContent:"center",marginTop:10 },
+  kbBackspace: { width:"12%",maxWidth:84,background:"#7f3138",fontSize:22 },
 
   // Buttons
   smallBtn: {
-    padding:"8px 18px",borderRadius:8,border:"none",color:"#fff",fontFamily:"system-ui,-apple-system,sans-serif",
-    fontWeight:700,fontSize:13,cursor:"pointer",boxShadow:"0 2px 0 rgba(0,0,0,0.2)",
+    padding:"11px 20px",borderRadius:12,border:"none",color:"#fff",fontFamily:"system-ui,-apple-system,sans-serif",
+    fontWeight:800,fontSize:16,cursor:"pointer",boxShadow:"0 3px 0 rgba(0,0,0,0.22)",
   },
+  actionBtn: { minHeight:54,minWidth:130,fontSize:18 },
   tinyBtn: {
     padding:"5px 12px",borderRadius:6,border:"none",color:"#fff",background:"#3a86ff",
     fontFamily:"system-ui,-apple-system,sans-serif",fontWeight:700,fontSize:11,cursor:"pointer",
